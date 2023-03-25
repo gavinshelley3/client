@@ -11,13 +11,17 @@ import android.widget.Toast;
 import androidx.fragment.app.Fragment;
 
 import Request.LoginRequest;
+import Request.RegisterRequest;
 import Result.LoginResult;
+import Result.RegisterResult;
 
 public class LoginFragment extends Fragment {
     private EditText usernameEditText;
     private EditText passwordEditText;
-    private EditText serverHostEditText;
-    private EditText serverPortEditText;
+    private EditText emailEditText;
+    private EditText firstNameEditText;
+    private EditText lastNameEditText;
+    private EditText genderEditText;
     private Button loginButton;
     private Button registerButton;
     private ServerProxy serverProxy;
@@ -34,8 +38,10 @@ public class LoginFragment extends Fragment {
         // Initialize views
         usernameEditText = view.findViewById(R.id.usernameEditText);
         passwordEditText = view.findViewById(R.id.passwordEditText);
-        serverHostEditText = view.findViewById(R.id.serverHostEditText);
-        serverPortEditText = view.findViewById(R.id.serverPortEditText);
+        emailEditText = view.findViewById(R.id.emailEditText);
+        firstNameEditText = view.findViewById(R.id.firstNameEditText);
+        lastNameEditText = view.findViewById(R.id.lastNameEditText);
+        genderEditText = view.findViewById(R.id.genderEditText);
         loginButton = view.findViewById(R.id.loginButton);
         registerButton = view.findViewById(R.id.registerButton);
 
@@ -67,8 +73,10 @@ public class LoginFragment extends Fragment {
     private boolean validateInput() {
         if (usernameEditText.getText().toString().isEmpty() ||
                 passwordEditText.getText().toString().isEmpty() ||
-                serverHostEditText.getText().toString().isEmpty() ||
-                serverPortEditText.getText().toString().isEmpty()) {
+                emailEditText.getText().toString().isEmpty() ||
+                firstNameEditText.getText().toString().isEmpty() ||
+                lastNameEditText.getText().toString().isEmpty() ||
+                genderEditText.getText().toString().isEmpty()) {
             Toast.makeText(getActivity(), "Please fill in all fields", Toast.LENGTH_SHORT).show();
             return false;
         }
@@ -78,8 +86,7 @@ public class LoginFragment extends Fragment {
     private void performLogin() {
         String username = usernameEditText.getText().toString();
         String password = passwordEditText.getText().toString();
-        String serverHost = serverHostEditText.getText().toString();
-        int serverPort = Integer.parseInt(serverPortEditText.getText().toString());
+
 
         // Create a LoginRequest object
         LoginRequest loginRequest = new LoginRequest(username, password);
@@ -105,25 +112,43 @@ public class LoginFragment extends Fragment {
             }
         });
     }
-
     private void performRegistration() {
         String username = usernameEditText.getText().toString();
         String password = passwordEditText.getText().toString();
-        String serverHost = serverHostEditText.getText().toString();
-        int serverPort = Integer.parseInt(serverPortEditText.getText().toString());
+        String email = emailEditText.getText().toString();
+        String firstName = firstNameEditText.getText().toString();
+        String lastName = lastNameEditText.getText().toString();
+        String gender = genderEditText.getText().toString();
 
-        // Create a LoginRequest object for registration
-        LoginRequest registerRequest = new LoginRequest(username, password);
+        // Create a RegisterRequest object
+        // Create a RegisterRequest object
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setUsername(username);
+        registerRequest.setPassword(password);
+        registerRequest.setEmail(email);
+        registerRequest.setFirstName(firstName);
+        registerRequest.setLastName(lastName);
+        registerRequest.setGender(gender);
 
-        // TODO: Implement the logic to send a registration request to the back-end server and handle the response
+        // Send the registerRequest to the server and handle the response
+        serverProxy.register(registerRequest, new ServerProxy.RegisterListener() {
+            @Override
+            public void onRegisterSuccess(RegisterResult registerResult) {
+                if (registerResult.isSuccess()) {
+                    // Navigate to MapFragment
+                    getActivity().getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.fragment_container, new MapFragment())
+                            .commit();
+                } else {
+                    // Show an error message
+                    Toast.makeText(getActivity(), registerResult.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }
 
-        // For example, if the response is a successful LoginResult (after successful registration)
-        // LoginResult loginResult = ...
-        // if (loginResult.isSuccess()) {
-        //     // Proceed to the next activity or fragment
-        // } else {
-        //     // Show an error message
-        //     Toast.makeText(getActivity(), loginResult.getMessage(), Toast.LENGTH_SHORT).show();
-        // }
+            @Override
+            public void onRegisterError(String error) {
+                Toast.makeText(getActivity(), "Registration error: " + error, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
