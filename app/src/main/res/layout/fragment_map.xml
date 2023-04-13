@@ -9,4 +9,15 @@
         android:layout_height="match_parent"
         android:contentDescription="@string/map_content_description" />
 
+    <TextView
+        android:id="@+id/event_info_text_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Event Information"
+        android:textColor="#FFFFFF"
+        android:background="#FF3700B3"
+        android:gravity="center"
+        android:padding="10dp"
+        android:layout_alignParentBottom="true" />
+
 </RelativeLayout>
