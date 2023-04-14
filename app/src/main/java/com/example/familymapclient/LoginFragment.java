@@ -90,7 +90,8 @@ public class LoginFragment extends Fragment {
         loginButton.setAlpha(0.5f);
         usernameEditText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -98,11 +99,13 @@ public class LoginFragment extends Fragment {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
         passwordEditText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -110,11 +113,13 @@ public class LoginFragment extends Fragment {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
         serverHostEditText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -122,11 +127,13 @@ public class LoginFragment extends Fragment {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
         serverPortEditText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -134,7 +141,8 @@ public class LoginFragment extends Fragment {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
 
         // Fade and disable the Register button until all fields are filled
@@ -142,7 +150,8 @@ public class LoginFragment extends Fragment {
         registerButton.setAlpha(0.5f);
         emailEditText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -150,11 +159,13 @@ public class LoginFragment extends Fragment {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
         firstNameEditText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -162,11 +173,13 @@ public class LoginFragment extends Fragment {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
         lastNameEditText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -174,7 +187,8 @@ public class LoginFragment extends Fragment {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
         genderRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
@@ -188,39 +202,23 @@ public class LoginFragment extends Fragment {
 
     // Check if all fields are filled and enable the Login and Register buttons if so
     private void checkFields() {
-        boolean loginEnabled = !usernameEditText.getText().toString().isEmpty() &&
-                !passwordEditText.getText().toString().isEmpty() &&
-                !serverHostEditText.getText().toString().isEmpty() &&
-                !serverPortEditText.getText().toString().isEmpty();
+        boolean loginEnabled = !usernameEditText.getText().toString().isEmpty() && !passwordEditText.getText().toString().isEmpty() && !serverHostEditText.getText().toString().isEmpty() && !serverPortEditText.getText().toString().isEmpty();
         loginButton.setEnabled(loginEnabled);
         loginButton.setAlpha(loginEnabled ? 1.0f : 0.5f);
 
-        boolean registerEnabled = !emailEditText.getText().toString().isEmpty() &&
-                !firstNameEditText.getText().toString().isEmpty() &&
-                !lastNameEditText.getText().toString().isEmpty() &&
-                (maleRadioButton.isChecked() || femaleRadioButton.isChecked());
+        boolean registerEnabled = !emailEditText.getText().toString().isEmpty() && !firstNameEditText.getText().toString().isEmpty() && !lastNameEditText.getText().toString().isEmpty() && (maleRadioButton.isChecked() || femaleRadioButton.isChecked());
         registerButton.setEnabled(registerEnabled);
         registerButton.setAlpha(registerEnabled ? 1.0f : 0.5f);
     }
 
     private boolean validateInput(boolean isLogin) {
         if (isLogin) {
-            if (usernameEditText.getText().toString().isEmpty() ||
-                    passwordEditText.getText().toString().isEmpty() ||
-                    serverHostEditText.getText().toString().isEmpty() ||
-                    serverPortEditText.getText().toString().isEmpty()) {
+            if (usernameEditText.getText().toString().isEmpty() || passwordEditText.getText().toString().isEmpty() || serverHostEditText.getText().toString().isEmpty() || serverPortEditText.getText().toString().isEmpty()) {
                 Toast.makeText(getActivity(), "Please fill in all fields", Toast.LENGTH_SHORT).show();
                 return false;
             }
         } else {
-            if (usernameEditText.getText().toString().isEmpty() ||
-                    passwordEditText.getText().toString().isEmpty() ||
-                    emailEditText.getText().toString().isEmpty() ||
-                    firstNameEditText.getText().toString().isEmpty() ||
-                    lastNameEditText.getText().toString().isEmpty() ||
-                    serverHostEditText.getText().toString().isEmpty() ||
-                    serverPortEditText.getText().toString().isEmpty() ||
-                    (!maleRadioButton.isChecked() && !femaleRadioButton.isChecked())) {
+            if (usernameEditText.getText().toString().isEmpty() || passwordEditText.getText().toString().isEmpty() || emailEditText.getText().toString().isEmpty() || firstNameEditText.getText().toString().isEmpty() || lastNameEditText.getText().toString().isEmpty() || serverHostEditText.getText().toString().isEmpty() || serverPortEditText.getText().toString().isEmpty() || (!maleRadioButton.isChecked() && !femaleRadioButton.isChecked())) {
                 Toast.makeText(getActivity(), "Please fill in all fields", Toast.LENGTH_SHORT).show();
                 return false;
             }
@@ -255,9 +253,7 @@ public class LoginFragment extends Fragment {
                             Toast.makeText(getActivity(), "Welcome, " + firstName + " " + lastName, Toast.LENGTH_SHORT).show();
 
                             // Navigate to the MapFragment
-                            getActivity().getSupportFragmentManager().beginTransaction()
-                                    .replace(R.id.fragment_container, new MapFragment())
-                                    .commit();
+                            getActivity().getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new MapFragment()).commit();
                         }
 
                         @Override
@@ -294,6 +290,7 @@ public class LoginFragment extends Fragment {
             }
         });
     }
+
     private void performRegistration() {
         initializeServerProxy();
         // Get the values from the EditTexts
