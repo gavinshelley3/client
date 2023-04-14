@@ -2,12 +2,11 @@ package com.example.familymapclient;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentManager;
-
 import android.os.Bundle;
-
 import Result.EventResult;
 
 public class MainActivity extends AppCompatActivity {
+    private ServerProxy serverProxy;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -15,8 +14,27 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Add the LoginFragment
+        // Initialize the ServerProxy instance
+        serverProxy = new ServerProxy(this);
+
+        // Replace the fragment_container with a new LoginFragment
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager.beginTransaction().replace(R.id.fragment_container, new LoginFragment()).commit();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        clearCache();
+    }
+
+    private void clearCache() {
+        if (serverProxy != null) {
+            serverProxy.clearCache();
+        }
+    }
+
+    public ServerProxy getServerProxy() {
+        return serverProxy;
     }
 }

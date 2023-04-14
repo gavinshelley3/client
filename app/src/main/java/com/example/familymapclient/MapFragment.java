@@ -40,7 +40,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private GoogleMap map;
     private HashMap<String, Float> eventTypeColors = new HashMap<>();
     private float[] colorArray = {BitmapDescriptorFactory.HUE_AZURE, BitmapDescriptorFactory.HUE_BLUE, BitmapDescriptorFactory.HUE_CYAN, BitmapDescriptorFactory.HUE_GREEN, BitmapDescriptorFactory.HUE_MAGENTA, BitmapDescriptorFactory.HUE_ORANGE, BitmapDescriptorFactory.HUE_RED, BitmapDescriptorFactory.HUE_ROSE, BitmapDescriptorFactory.HUE_VIOLET, BitmapDescriptorFactory.HUE_YELLOW};
-    private int colorIndex = 0;
 
     public MapFragment() {
         // Required empty public constructor
@@ -50,6 +49,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_map, container, false);
+
+        // Get the MainActivity instance and access the ServerProxy
+        MainActivity mainActivity = (MainActivity) getActivity();
+        ServerProxy serverProxy = mainActivity.getServerProxy();
 
         mapView = view.findViewById(R.id.map);
         mapView.onCreate(savedInstanceState);
@@ -106,63 +109,29 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             public void onCacheEventError(String error) {
                 Log.d("ServerProxy", "onCacheEventError: " + error);
             }
+
+            @Override
+            public void onCacheEventCompleted(JSONObject jsonObject) {
+                // Update the map with the cached data
+                setupEventMarkers(jsonObject);
+            }
         };
         ServerProxy serverProxy = new ServerProxy(requireContext());
         new CacheDataTask(serverProxy, cacheListener).execute();
     }
 
     private void setupEventMarkers(JSONObject eventsData) {
-        // Get the events from the cache
-        String authToken = getAuthTokenFromStorage();
-
-        if (eventsData != null) {
-            LatLngBounds.Builder builder = new LatLngBounds.Builder();
-            try {
-                JSONArray eventsArray = eventsData.getJSONArray("data");
-                for (int i = 0; i < eventsArray.length(); i++) {
-                    JSONObject event = eventsArray.getJSONObject(i);
-                    // Retrieve event details
-                    String eventType = event.getString("eventType");
-                    double latitude = event.getDouble("latitude");
-                    double longitude = event.getDouble("longitude");
-                    String eventId = event.getString("eventID");
-
-                    // Get color for the event type
-                    float markerColor = getMarkerColor(eventType);
-
-                    // Add a marker on the map for this event
-                    LatLng eventLocation = new LatLng(latitude, longitude);
-                    MarkerOptions markerOptions = new MarkerOptions().position(eventLocation).title(eventId).icon(BitmapDescriptorFactory.defaultMarker(markerColor));
-                    map.addMarker(markerOptions);
-
-                    // Include the event location in the bounds
-                    builder.include(eventLocation);
-                }
-
-                // Move the camera to fit all markers with a padding
-                LatLngBounds bounds = builder.build();
-                int padding = 100; // Padding in pixels
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, padding);
-                map.moveCamera(cameraUpdate);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private float getMarkerColor(String eventType) {
-        if (!eventTypeColors.containsKey(eventType)) {
-            eventTypeColors.put(eventType, colorArray[colorIndex]);
-            colorIndex = (colorIndex + 1) % colorArray.length;
-        }
-        return eventTypeColors.get(eventType);
+        AddMarkersTask addMarkersTask = new AddMarkersTask(map, eventsData, eventTypeColors, colorArray);
+        addMarkersTask.execute();
     }
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        // Retrieve the authToken from where you stored it
+        Log.d("MapFragmentDebug", "onActivityCreated: started");
+
+        // Retrieve the authToken from cache
         String authToken = getAuthTokenFromStorage();
 
         // Get the cached family data
@@ -174,28 +143,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             updateEventInfoTextView(familyData);
         }
 
-        // Execute CacheDataTask
-        CacheDataTask cacheDataTask = new CacheDataTask(serverProxy, new ServerProxy.cacheEventListener() {
-            @Override
-            public void onCacheEventSuccess(String message) {
-            }
-
-            @Override
-            public void onCacheEventError(String error) {
-            }
-
-            @Override
-            public void onCacheEventCompleted(JSONObject jsonObject) {
-                // Update the map with the cached data
-                setupEventMarkers(jsonObject);
-            }
-        });
-        cacheDataTask.execute(authToken);
+        Log.d("MapFragmentDebug", "onActivityCreated: finished");
     }
 
     private String getAuthTokenFromStorage() {
         SharedPreferences sharedPreferences = requireContext().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE);
-        return sharedPreferences.getString("authToken", null);
+        String authToken = sharedPreferences.getString("authToken", null);
+        Log.d("MapFragmentDebug", "getAuthTokenFromStorage: authToken = " + authToken);
+        return authToken;
     }
 
     private void updateEventInfoTextView(JSONObject familyData) {

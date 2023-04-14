@@ -25,7 +25,9 @@ import Result.LoginResult;
 import Result.PersonResult;
 import Result.RegisterResult;
 
+// LoginFragment class that handles user login and registration
 public class LoginFragment extends Fragment {
+    // Declare UI components
     private EditText serverHostEditText;
     private EditText serverPortEditText;
     private EditText usernameEditText;
@@ -40,13 +42,13 @@ public class LoginFragment extends Fragment {
     private Button registerButton;
     private ServerProxy serverProxy;
 
+    // Required empty public constructor
     public LoginFragment() {
-        // Required empty public constructor
     }
 
+    // Inflate the layout for this fragment and initialize UI components
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_login, container, false);
 
         // Initialize views
@@ -63,10 +65,11 @@ public class LoginFragment extends Fragment {
         serverHostEditText = view.findViewById(R.id.serverHostEditText);
         serverPortEditText = view.findViewById(R.id.serverPortEditText);
 
-        // Initialize the ServerProxy
-        serverProxy = new ServerProxy(getActivity());
+        // Get the MainActivity instance and access the ServerProxy
+        MainActivity mainActivity = (MainActivity) getActivity();
+        ServerProxy serverProxy = mainActivity.getServerProxy();
 
-        // Set up interaction listeners
+        // Set up interaction listeners for the Login button
         loginButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -76,6 +79,7 @@ public class LoginFragment extends Fragment {
             }
         });
 
+        // Set up interaction listeners for the Register button
         registerButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -85,111 +89,16 @@ public class LoginFragment extends Fragment {
             }
         });
 
-        // Fade and disable the Login button until all fields are filled
-        loginButton.setEnabled(false);
-        loginButton.setAlpha(0.5f);
-        usernameEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
+        // Set up TextWatchers to enable and disable the Login button based on input fields
+        setupLoginButtonWatcher(usernameEditText);
+        setupLoginButtonWatcher(passwordEditText);
+        setupLoginButtonWatcher(serverHostEditText);
+        setupLoginButtonWatcher(serverPortEditText);
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                checkFields();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
-        passwordEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                checkFields();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
-        serverHostEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                checkFields();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
-        serverPortEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                checkFields();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
-
-        // Fade and disable the Register button until all fields are filled
-        registerButton.setEnabled(false);
-        registerButton.setAlpha(0.5f);
-        emailEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                checkFields();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
-        firstNameEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                checkFields();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
-        lastNameEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                checkFields();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
+        // Set up TextWatchers to enable and disable the Register button based on input fields
+        setupRegisterButtonWatcher(emailEditText);
+        setupRegisterButtonWatcher(firstNameEditText);
+        setupRegisterButtonWatcher(lastNameEditText);
         genderRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
@@ -200,24 +109,66 @@ public class LoginFragment extends Fragment {
         return view;
     }
 
+    // Set up TextWatcher for Login button
+    private void setupLoginButtonWatcher(EditText editText) {
+        editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                checkFields();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+    }
+
+    // Set up TextWatcher for Register button
+    private void setupRegisterButtonWatcher(EditText editText) {
+        editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                checkFields();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+    }
+
     // Check if all fields are filled and enable the Login and Register buttons if so
     private void checkFields() {
+        // Enable or disable Login button based on input fields
         boolean loginEnabled = !usernameEditText.getText().toString().isEmpty() && !passwordEditText.getText().toString().isEmpty() && !serverHostEditText.getText().toString().isEmpty() && !serverPortEditText.getText().toString().isEmpty();
         loginButton.setEnabled(loginEnabled);
         loginButton.setAlpha(loginEnabled ? 1.0f : 0.5f);
 
+        // Enable or disable Register button based on input fields
         boolean registerEnabled = !emailEditText.getText().toString().isEmpty() && !firstNameEditText.getText().toString().isEmpty() && !lastNameEditText.getText().toString().isEmpty() && (maleRadioButton.isChecked() || femaleRadioButton.isChecked());
         registerButton.setEnabled(registerEnabled);
         registerButton.setAlpha(registerEnabled ? 1.0f : 0.5f);
     }
 
+    // Validate input fields before performing login or registration
     private boolean validateInput(boolean isLogin) {
+        // Check required fields for login
         if (isLogin) {
             if (usernameEditText.getText().toString().isEmpty() || passwordEditText.getText().toString().isEmpty() || serverHostEditText.getText().toString().isEmpty() || serverPortEditText.getText().toString().isEmpty()) {
                 Toast.makeText(getActivity(), "Please fill in all fields", Toast.LENGTH_SHORT).show();
                 return false;
             }
-        } else {
+        }
+        // Check required fields for registration
+        else {
             if (usernameEditText.getText().toString().isEmpty() || passwordEditText.getText().toString().isEmpty() || emailEditText.getText().toString().isEmpty() || firstNameEditText.getText().toString().isEmpty() || lastNameEditText.getText().toString().isEmpty() || serverHostEditText.getText().toString().isEmpty() || serverPortEditText.getText().toString().isEmpty() || (!maleRadioButton.isChecked() && !femaleRadioButton.isChecked())) {
                 Toast.makeText(getActivity(), "Please fill in all fields", Toast.LENGTH_SHORT).show();
                 return false;
@@ -226,28 +177,31 @@ public class LoginFragment extends Fragment {
         return true;
     }
 
+    // Initialize ServerProxy with server host and port
     private void initializeServerProxy() {
         String serverHost = serverHostEditText.getText().toString();
         String serverPort = serverPortEditText.getText().toString();
         serverProxy = new ServerProxy(getActivity(), serverHost, serverPort);
     }
 
+    // Perform login by sending a LoginRequest to the server
     private void performLogin() {
         initializeServerProxy();
         String username = usernameEditText.getText().toString();
         String password = passwordEditText.getText().toString();
-
 
         // Create a LoginRequest object
         LoginRequest loginRequest = new LoginRequest(username, password);
 
         // Send the loginRequest to the server and handle the response
         serverProxy.login(loginRequest, new ServerProxy.LoginListener() {
+            // Handle successful login
             @Override
             public void onLoginSuccess(LoginResult loginResult) {
                 if (loginResult.isSuccess()) {
                     Log.d("LoginFragment", "Login successful");
                     serverProxy.fetchFamilyData(loginResult.getAuthtoken(), loginResult.getPersonID(), new ServerProxy.FamilyDataListener() {
+                        // Handle successful family data fetch
                         @Override
                         public void onFamilyDataSuccess(String firstName, String lastName) {
                             Toast.makeText(getActivity(), "Welcome, " + firstName + " " + lastName, Toast.LENGTH_SHORT).show();
@@ -256,34 +210,19 @@ public class LoginFragment extends Fragment {
                             getActivity().getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new MapFragment()).commit();
                         }
 
+                        // Handle error in family data fetch
                         @Override
                         public void onFamilyDataError(String error) {
                             Toast.makeText(getActivity(), "Error fetching family data: " + error, Toast.LENGTH_SHORT).show();
                         }
                     });
                 } else {
-                    // Show an error message
+                    // Show an error message for failed login
                     Toast.makeText(getActivity(), "Login failed: " + loginResult.getMessage(), Toast.LENGTH_SHORT).show();
                 }
-
-//                serverProxy.fetchPersonData(loginResult.getAuthtoken(), loginResult.getPersonID(), new ServerProxy.PersonDataListener() {
-//                    @Override
-//                    public void onPersonDataSuccess(PersonResult personResult) {
-//                        // Pass the person data to the PersonActivity using intents
-//                        Intent personIntent = new Intent(getActivity(), PersonActivity.class);
-//                        personIntent.putExtra("firstName", personResult.getFirstName());
-//                        personIntent.putExtra("lastName", personResult.getLastName());
-//                        personIntent.putExtra("gender", personResult.getGender());
-////                        startActivity(personIntent);
-//                    }
-//
-//                    @Override
-//                    public void onPersonDataError(String error) {
-//                        Toast.makeText(getActivity(), "Error fetching person data: " + error, Toast.LENGTH_SHORT).show();
-//                    }
-//                });
             }
 
+            // Handle login error
             @Override
             public void onLoginError(String error) {
                 Toast.makeText(getActivity(), "Login error: " + error, Toast.LENGTH_SHORT).show();
@@ -291,6 +230,7 @@ public class LoginFragment extends Fragment {
         });
     }
 
+    // Perform registration by sending a RegisterRequest to the server
     private void performRegistration() {
         initializeServerProxy();
         // Get the values from the EditTexts
@@ -315,11 +255,13 @@ public class LoginFragment extends Fragment {
 
         // Send the registerRequest to the server and handle the response
         serverProxy.register(registerRequest, new ServerProxy.RegisterListener() {
+            // Handle successful registration
             @Override
             public void onRegisterSuccess(RegisterResult registerResult) {
                 if (registerResult.isSuccess()) {
                     Log.d("RegisterFragment", "Register success");
                     serverProxy.fetchFamilyData(registerResult.getAuthtoken(), registerResult.getPersonID(), new ServerProxy.FamilyDataListener() {
+                        // Handle successful family data fetch
                         @Override
                         public void onFamilyDataSuccess(String firstName, String lastName) {
                             Toast.makeText(getActivity(), "Welcome, " + firstName + " " + lastName, Toast.LENGTH_SHORT).show();
@@ -331,17 +273,19 @@ public class LoginFragment extends Fragment {
                             transaction.commit();
                         }
 
+                        // Handle error in family data fetch
                         @Override
                         public void onFamilyDataError(String error) {
                             Toast.makeText(getActivity(), "Error fetching family data: " + error, Toast.LENGTH_SHORT).show();
                         }
                     });
                 } else {
-                    // Show an error message
+                    // Show an error message for failed registration
                     Toast.makeText(getActivity(), registerResult.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
 
+            // Handle registration error
             @Override
             public void onRegisterError(String error) {
                 Toast.makeText(getActivity(), "Registration error: " + error, Toast.LENGTH_SHORT).show();

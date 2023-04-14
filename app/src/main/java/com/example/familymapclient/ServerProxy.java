@@ -35,6 +35,7 @@ public class ServerProxy {
     private RequestQueue requestQueue;
     private Context context;
 
+    // Constructor to initialize the server URL and context
     public ServerProxy(Context context, String serverHost, String serverPort) {
         requestQueue = Volley.newRequestQueue(context);
 //        BASE_URL = "http://" + serverHost + ":" + serverPort;
@@ -42,35 +43,43 @@ public class ServerProxy {
         this.context = context;
     }
 
+    // LoginListener interface for login callback methods
     public interface LoginListener {
         void onLoginSuccess(LoginResult loginResult);
 
         void onLoginError(String error);
     }
 
+    // RegisterListener interface for register callback methods
     public interface RegisterListener {
         void onRegisterSuccess(RegisterResult registerResult);
 
         void onRegisterError(String error);
     }
 
+    // FamilyDataListener interface for family data callback methods
     public interface FamilyDataListener {
         void onFamilyDataSuccess(String firstName, String lastName);
 
         void onFamilyDataError(String error);
     }
 
+    // cacheEventListener interface for cache event callback methods
     public interface cacheEventListener {
         void onCacheEventSuccess(String message);
+
         void onCacheEventError(String error);
-        default void onCacheEventCompleted(JSONObject jsonObject) {} // Add default implementation
+
+        default void onCacheEventCompleted(JSONObject jsonObject) {
+        } // Add default implementation
     }
 
-
+    // Constructor to initialize the context
     public ServerProxy(Context context) {
         requestQueue = Volley.newRequestQueue(context);
     }
 
+    // Method to handle login request and response
     public void login(LoginRequest loginRequest, final LoginListener listener) {
         String url = BASE_URL + "/user/login";
 
@@ -119,6 +128,7 @@ public class ServerProxy {
         requestQueue.add(request);
     }
 
+    // Method to handle register request and response
     public void register(RegisterRequest registerRequest, final RegisterListener listener) {
         String url = BASE_URL + "/user/register";
 
@@ -171,6 +181,7 @@ public class ServerProxy {
         requestQueue.add(request);
     }
 
+    // Method to fetch family data for a given authToken and personID
     public void fetchFamilyData(final String authToken, String personID, final FamilyDataListener listener) {
         String url = BASE_URL + "/person/" + personID; // Include the personID in the URL
         Log.d("ServerProxy", "fetchFamilyData: " + url);
@@ -226,6 +237,7 @@ public class ServerProxy {
         requestQueue.add(request);
     }
 
+    // Method to save authToken to SharedPreferences
     public void saveAuthTokenToStorage(Context context, String authToken) {
         SharedPreferences sharedPreferences = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -233,6 +245,7 @@ public class ServerProxy {
         editor.apply();
     }
 
+    // Method to get family data from cache
     public JSONObject getFamilyDataFromCache(String authToken) {
         Cache.Entry cacheEntry = requestQueue.getCache().get(authToken);
         if (cacheEntry != null) {
@@ -246,9 +259,10 @@ public class ServerProxy {
         return null;
     }
 
+    // Method to cache events data
     public void cacheEvents(String authToken, final cacheEventListener listener) {
-        String url = BASE_URL + "/event/" + authToken;
-        Log.d("ServerProxy", "cacheEvents: " + url);
+        String url = BASE_URL + "/event";
+        Log.d("ServerProxy", "cacheEvents: authToken = " + authToken);
 
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
             @Override
@@ -260,16 +274,24 @@ public class ServerProxy {
                         JSONArray data = response.getJSONArray("data");
                         for (int i = 0; i < data.length(); i++) {
                             JSONObject event = data.getJSONObject(i);
-                            String eventType = event.getString("eventType");
-                            String personID = event.getString("personID");
-                            String city = event.getString("city");
-                            String country = event.getString("country");
-                            Double latitude = event.getDouble("latitude");
-                            Double longitude = event.getDouble("longitude");
-                            Integer year = event.getInt("year");
-                            String eventID = event.getString("eventID");
-                            String associatedUsername = event.getString("associatedUsername");
+//                            String eventType = event.getString("eventType");
+//                            String personID = event.getString("personID");
+//                            String city = event.getString("city");
+//                            String country = event.getString("country");
+//                            Double latitude = event.getDouble("latitude");
+//                            Double longitude = event.getDouble("longitude");
+//                            Integer year = event.getInt("year");
+//                            String eventID = event.getString("eventID");
+//                            String associatedUsername = event.getString("associatedUsername");
                         }
+                        // Add events data to cache
+                        String cacheKey = "events";
+                        Cache.Entry cacheEntry = new Cache.Entry();
+                        cacheEntry.data = response.toString().getBytes();
+                        cacheEntry.responseHeaders = new HashMap<>();
+                        cacheEntry.responseHeaders.put("Content-Type", "application/json");
+                        cacheEntry.ttl = 15 * 60 * 1000; // 15 minutes
+                        requestQueue.getCache().put(cacheKey, cacheEntry);
                         listener.onCacheEventSuccess("Events cached successfully");
                     } else {
                         listener.onCacheEventError(message);
@@ -285,13 +307,22 @@ public class ServerProxy {
             public void onErrorResponse(VolleyError error) {
                 listener.onCacheEventError(error.getMessage());
             }
-        });
+        }) {
+            // Add the authToken in the request header using an anonymous class
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", authToken);
+                return headers;
+            }
+        };
 
         requestQueue.add(request);
     }
 
-    public JSONObject getEventsFromCache(String authToken) {
-        Cache.Entry cacheEntry = requestQueue.getCache().get(authToken);
+    // Method to get events data from cache
+    public JSONObject getEventsFromCache(String cacheKey) {
+        Cache.Entry cacheEntry = requestQueue.getCache().get(cacheKey);
         if (cacheEntry != null) {
             try {
                 String jsonString = new String(cacheEntry.data, "UTF-8");
@@ -303,5 +334,9 @@ public class ServerProxy {
         return null;
     }
 
-
+    public void clearCache() {
+        if (requestQueue != null) {
+            requestQueue.getCache().clear();
+        }
+    }
 }
