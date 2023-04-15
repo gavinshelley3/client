@@ -1,8 +1,6 @@
 package com.example.familymapclient;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -16,13 +14,11 @@ import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import Request.LoginRequest;
 import Request.RegisterRequest;
 import Result.LoginResult;
-import Result.PersonResult;
 import Result.RegisterResult;
 
 // LoginFragment class that handles user login and registration

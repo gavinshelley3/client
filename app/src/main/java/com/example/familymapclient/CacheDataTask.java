@@ -6,8 +6,6 @@ import android.util.Log;
 
 import androidx.core.os.HandlerCompat;
 
-import com.example.familymapclient.ServerProxy;
-
 import org.json.JSONObject;
 
 import java.util.concurrent.Executor;

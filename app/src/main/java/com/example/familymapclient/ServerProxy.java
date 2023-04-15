@@ -10,7 +10,6 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.HttpHeaderParser;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
@@ -19,17 +18,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import Model.Event;
 import Request.LoginRequest;
+import Request.RegisterRequest;
 import Result.LoginResult;
 import Result.RegisterResult;
-import Request.RegisterRequest;
-import Request.PersonRequest;
-import Result.PersonResult;
 
 public class ServerProxy {
     private String BASE_URL = "http://" + "10.0.2.2" + ":" + "3000";
@@ -389,6 +384,30 @@ public class ServerProxy {
         requestQueue.add(request);
     }
 
+    // Method to get single event from cache
+    public JSONObject getEventFromCache(String cacheKey, String eventID) {
+        Log.d("ServerProxy", "getEventFromCache: " + cacheKey);
+        Cache.Entry cacheEntry = requestQueue.getCache().get(cacheKey);
+        Log.d("ServerProxy", "getEventFromCache: " + cacheEntry);
+        if (cacheEntry != null) {
+            try {
+                String jsonString = new String(cacheEntry.data, "UTF-8");
+                JSONObject cachedEvents = new JSONObject(jsonString);
+                Log.d("ServerProxy", "getEventFromCache: " + cachedEvents);
+                JSONArray events = cachedEvents.getJSONArray("data");
+                for (int i = 0; i < events.length(); i++) {
+                    JSONObject event = events.getJSONObject(i);
+                    if (event.getString("eventID").equals(eventID)) {
+                        return event;
+                    }
+                }
+            } catch (UnsupportedEncodingException | JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
     // Method to get events data from cache
     public JSONObject getEventsFromCache(String cacheKey) {
         Log.d("ServerProxy", "getEventsFromCache: " + cacheKey);
@@ -400,6 +419,25 @@ public class ServerProxy {
                 JSONObject cachedEvents = new JSONObject(jsonString);
                 Log.d("ServerProxy", "getEventsFromCache: " + cachedEvents);
                 return cachedEvents;
+            } catch (UnsupportedEncodingException | JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
+    // Method to get events data from cache in JSONARRAY format
+    public JSONArray getEventsFromCacheAsJSONArray(String cacheKey) {
+        Log.d("ServerProxy", "getEventsFromCache: " + cacheKey);
+        Cache.Entry cacheEntry = requestQueue.getCache().get(cacheKey);
+        Log.d("ServerProxy", "getEventsFromCache: " + cacheEntry);
+        if (cacheEntry != null) {
+            try {
+                String jsonString = new String(cacheEntry.data, "UTF-8");
+                JSONObject cachedEvents = new JSONObject(jsonString);
+                Log.d("ServerProxy", "getEventsFromCache: " + cachedEvents);
+                JSONArray eventsArray = cachedEvents.getJSONArray("data");
+                return eventsArray;
             } catch (UnsupportedEncodingException | JSONException e) {
                 e.printStackTrace();
             }
