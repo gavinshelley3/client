@@ -1,71 +1,97 @@
 package com.example.familymapclient;
 
-import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
+
+import androidx.core.os.HandlerCompat;
+
+import com.example.familymapclient.ServerProxy;
 
 import org.json.JSONObject;
 
-// This class is responsible for caching data from the server in a background thread
-public class CacheDataTask extends AsyncTask<String, Void, JSONObject> {
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
+public class CacheDataTask {
     private ServerProxy.cacheEventListener listener;
     private ServerProxy serverProxy;
+    private Executor executor;
+    private Handler mainThreadHandler;
 
-    // Constructor to initialize server proxy and cache event listener
+    // Constructor to initialize server proxy, cache event listener and executor
     public CacheDataTask(ServerProxy serverProxy, ServerProxy.cacheEventListener listener) {
         this.serverProxy = serverProxy;
         this.listener = listener;
+        this.executor = Executors.newSingleThreadExecutor();
+        this.mainThreadHandler = HandlerCompat.createAsync(Looper.getMainLooper());
     }
 
     // This method performs the caching task in the background thread
-    @Override
-    protected JSONObject doInBackground(String... authTokens) {
-        Log.d("CacheDataTaskDebug", "doInBackground: started");
+    public void execute(String authToken) {
+        Log.d("CacheDataTaskDebug", "execute: started");
 
-        if (authTokens.length == 0) {
-            return null;
-        }
+        executor.execute(() -> {
+            // Cache the events data using the server proxy
+            try {
+                serverProxy.cacheEvents(authToken, new ServerProxy.cacheEventListener() {
+                    // Handle the success of the cache event
+                    @Override
+                    public void onCacheEventSuccess(String message) {
+                        Log.d("CacheDataTaskDebug", "onCacheEventSuccess: " + message);
+                        // Retrieve the cached data
+                        JSONObject jsonObject = serverProxy.getEventsFromCache("events");
+                        Log.d("CacheDataTaskDebug", "getEventsFromCacheAfter: " + jsonObject.toString());
+                        // Notify the listener about the completion of the cache event task
+                        mainThreadHandler.post(() -> {
+                            if (listener != null) {
+                                listener.onCacheEventCompleted(jsonObject);
+                            }
+                        });
+                    }
 
-        String authToken = authTokens[0];
+                    // Handle the error of the cache event
+                    @Override
+                    public void onCacheEventError(String error) {
+                        Log.d("ServerProxy", "onCacheEventError: " + error);
+                    }
+                });
+            } catch (Exception e) {
+                Log.d("CacheDataTaskDebug", "getEventsError: " + e.getMessage());
+            }
 
-        // Cache the data using the server proxy
-        serverProxy.cacheEvents(authToken, new ServerProxy.cacheEventListener() {
-            // Handle the success of the cache event
-            @Override
-            public void onCacheEventSuccess(String message) {
-                Log.d("ServerProxy", "onCacheEventSuccess: " + message);
-                // Retrieve the cached data
-                JSONObject jsonObject = serverProxy.getEventsFromCache("events");
-                // Notify the listener about the completion of the cache event task
+            // Retrieve the cached data
+            JSONObject jsonObject = serverProxy.getEventsFromCache("events");
+            Log.d("CacheDataTaskDebug", "getEventsFromCacheAfter: " + jsonObject.toString());
+
+            Log.d("CacheDataTaskDebug", "execute:finished");
+
+            // Notify the listener about the completion of the cache event task
+            mainThreadHandler.post(() -> {
                 if (listener != null) {
                     listener.onCacheEventCompleted(jsonObject);
                 }
-            }
+            });
 
-            // Handle the error of the cache event
-            @Override
-            public void onCacheEventError(String error) {
-                Log.d("ServerProxy", "onCacheEventError: " + error);
+            // Cache the persons data using the server proxy
+            try {
+                serverProxy.cachePersons(authToken, new ServerProxy.cacheEventListener() {
+                    // Handle the success of the cache persons
+                    @Override
+                    public void onCacheEventSuccess(String message) {
+                        Log.d("CacheDataTaskDebug", "onCachePersonsSuccess: " + message);
+                    }
+
+                    // Handle the error of the cache persons
+                    @Override
+                    public void onCacheEventError(String error) {
+                        Log.d("CacheDataTaskDebug", "onCachePersonsError: " + error);
+                    }
+                });
+            } catch (Exception e) {
+                Log.d("CacheDataTaskDebug", "getPersonsError: " + e.getMessage());
             }
         });
-
-        // Retrieve the cached data
-        JSONObject jsonObject = serverProxy.getEventsFromCache(authToken);
-
-        Log.d("CacheDataTaskDebug", "doInBackground: finished");
-        return jsonObject;
-    }
-
-    // This method is called after the caching task is completed to return the result
-    @Override
-    protected void onPostExecute(JSONObject jsonObject) {
-        super.onPostExecute(jsonObject);
-        Log.d("CacheDataTaskDebug", "onPostExecute: started");
-
-        // Notify the listener about the completion of the cache event task
-        if (listener != null) {
-            listener.onCacheEventCompleted(jsonObject);
-        }
-
-        Log.d("CacheDataTaskDebug", "onPostExecute: finished");
     }
 }
+

@@ -19,6 +19,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,7 +32,7 @@ import Request.PersonRequest;
 import Result.PersonResult;
 
 public class ServerProxy {
-    private String BASE_URL;
+    private String BASE_URL = "http://" + "10.0.2.2" + ":" + "3000";
     private RequestQueue requestQueue;
     private Context context;
 
@@ -203,7 +204,8 @@ public class ServerProxy {
                     cacheEventListener cacheEventListener = new cacheEventListener() {
                         @Override
                         public void onCacheEventSuccess(String message) {
-                            Log.d("ServerProxy", "onCacheEventSuccess: " + message);
+                            Log.d("ServerProxy", "onCacheFamilyDataSuccess: " + message);
+                            Log.d("ServerProxy", "onCacheFamilyDataSuccess: " + response);
                         }
 
                         @Override
@@ -211,7 +213,7 @@ public class ServerProxy {
                             Log.d("ServerProxy", "onCacheEventError: " + error);
                         }
                     };
-                    cacheEvents(authToken, cacheEventListener);
+//                    cacheEvents(authToken, cacheEventListener);
 
                     listener.onFamilyDataSuccess(firstName, lastName);
                 } catch (JSONException e) {
@@ -259,6 +261,58 @@ public class ServerProxy {
         return null;
     }
 
+    // Method to cache persons data
+    public void cachePersons(String authToken, final cacheEventListener listener) {
+        String url = BASE_URL + "/person";
+        Log.d("ServerProxy", "cachePersons: authToken = " + authToken);
+
+        JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                try {
+                    String message = response.getString("message");
+                    boolean success = response.getBoolean("success");
+                    if (success) {
+                        JSONArray data = response.getJSONArray("data");
+
+                        Log.d("ServerProxy", "onResponse: " + response.toString());
+                        // Add persons data to cache
+                        String cacheKey = "persons";
+                        Cache.Entry cacheEntry = new Cache.Entry();
+                        cacheEntry.data = response.toString().getBytes();
+                        cacheEntry.responseHeaders = new HashMap<>();
+                        cacheEntry.responseHeaders.put("Content-Type", "application/json");
+                        cacheEntry.ttl = 15 * 60 * 1000; // 15 minutes
+                        requestQueue.getCache().put(cacheKey, cacheEntry);
+
+                        listener.onCacheEventSuccess("Persons cached successfully!!");
+                    } else {
+                        listener.onCacheEventError(message);
+                    }
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    listener.onCacheEventError("Error parsing persons data");
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                listener.onCacheEventError(error.getMessage());
+            }
+        }) {
+            // Add the authToken in the request header using an anonymous class
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", authToken);
+                return headers;
+            }
+        };
+
+        requestQueue.add(request);
+    }
+
     // Method to cache events data
     public void cacheEvents(String authToken, final cacheEventListener listener) {
         String url = BASE_URL + "/event";
@@ -284,6 +338,7 @@ public class ServerProxy {
 //                            String eventID = event.getString("eventID");
 //                            String associatedUsername = event.getString("associatedUsername");
                         }
+                        Log.d("ServerProxy", "onResponse: " + response.toString());
                         // Add events data to cache
                         String cacheKey = "events";
                         Cache.Entry cacheEntry = new Cache.Entry();
@@ -292,7 +347,21 @@ public class ServerProxy {
                         cacheEntry.responseHeaders.put("Content-Type", "application/json");
                         cacheEntry.ttl = 15 * 60 * 1000; // 15 minutes
                         requestQueue.getCache().put(cacheKey, cacheEntry);
-                        listener.onCacheEventSuccess("Events cached successfully");
+
+
+                        // Retrieve events data from cache to verify that it was cached successfully and to log it
+                        Cache.Entry cacheEntry2 = requestQueue.getCache().get(cacheKey);
+                        if (cacheEntry2 != null) {
+                            try {
+                                String jsonString = new String(cacheEntry2.data, "UTF-8");
+                                Log.d("ServerProxy", "onResponseTest: " + jsonString);
+                            } catch (UnsupportedEncodingException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+
+                        listener.onCacheEventSuccess("Events cached successfully!!");
                     } else {
                         listener.onCacheEventError(message);
                     }
@@ -322,11 +391,36 @@ public class ServerProxy {
 
     // Method to get events data from cache
     public JSONObject getEventsFromCache(String cacheKey) {
+        Log.d("ServerProxy", "getEventsFromCache: " + cacheKey);
         Cache.Entry cacheEntry = requestQueue.getCache().get(cacheKey);
+        Log.d("ServerProxy", "getEventsFromCache: " + cacheEntry);
         if (cacheEntry != null) {
             try {
                 String jsonString = new String(cacheEntry.data, "UTF-8");
-                return new JSONObject(jsonString);
+                JSONObject cachedEvents = new JSONObject(jsonString);
+                Log.d("ServerProxy", "getEventsFromCache: " + cachedEvents);
+                return cachedEvents;
+            } catch (UnsupportedEncodingException | JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
+    // Method to get persons data from cache
+    public JSONObject getPersonFromCache(String personID) {
+        Cache.Entry cacheEntry = requestQueue.getCache().get("persons");
+        if (cacheEntry != null) {
+            try {
+                String jsonString = new String(cacheEntry.data, "UTF-8");
+                JSONObject personsData = new JSONObject(jsonString);
+                JSONArray personsArray = personsData.getJSONArray("data");
+                for (int i = 0; i < personsArray.length(); i++) {
+                    JSONObject person = personsArray.getJSONObject(i);
+                    if (person.getString("personID").equals(personID)) {
+                        return person;
+                    }
+                }
             } catch (UnsupportedEncodingException | JSONException e) {
                 e.printStackTrace();
             }

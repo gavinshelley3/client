@@ -1,94 +1,93 @@
-// This class extends AsyncTask to allow adding markers to a GoogleMap in the background
+// This class extends Executor to allow adding markers to a GoogleMap in the background
 package com.example.familymapclient;
 
-import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+
+import androidx.core.os.HandlerCompat;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.clustering.ClusterManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
-public class AddMarkersTask extends AsyncTask<Void, Void, List<MarkerOptions>> {
-    // Define class variables
+import Model.Event;
+
+public class AddMarkersTask {
     private GoogleMap map;
     private JSONObject eventsData;
     private HashMap<String, Float> eventTypeColors;
     private float[] colorArray;
     private int colorIndex = 0;
+    private ClusterManager<ClusterMarker> clusterManager;
+    private Executor executor;
+    private Handler mainThreadHandler;
 
-    // Constructor to initialize class variables
-    public AddMarkersTask(GoogleMap map, JSONObject eventsData, HashMap<String, Float> eventTypeColors, float[] colorArray) {
+    public AddMarkersTask(GoogleMap map, JSONObject eventsData, HashMap<String, Float> eventTypeColors, float[] colorArray, ClusterManager<ClusterMarker> clusterManager) {
         this.map = map;
         this.eventsData = eventsData;
         this.eventTypeColors = eventTypeColors;
         this.colorArray = colorArray;
+        this.clusterManager = clusterManager;
+        this.executor = Executors.newSingleThreadExecutor();
+        this.mainThreadHandler = HandlerCompat.createAsync(Looper.getMainLooper());
     }
 
-    // doInBackground method to create a list of MarkerOptions from eventsData
-    @Override
-    protected List<MarkerOptions> doInBackground(Void... voids) {
-        List<MarkerOptions> markerOptionsList = new ArrayList<>();
+    public void execute() {
+        executor.execute(() -> {
+            if (eventsData != null) {
+                try {
+                    JSONArray eventsArray = eventsData.getJSONArray("data");
+                    for (int i = 0; i < eventsArray.length(); i++) {
+                        JSONObject eventJson = eventsArray.getJSONObject(i);
 
-        // Check if eventsData is not null
-        if (eventsData != null) {
-            try {
-                // Get eventsArray from eventsData
-                JSONArray eventsArray = eventsData.getJSONArray("data");
-                // Loop through eventsArray
-                for (int i = 0; i < eventsArray.length(); i++) {
-                    // Get event object from eventsArray
-                    JSONObject event = eventsArray.getJSONObject(i);
+                        Event event = new Event();
+                        event.setEventType(eventJson.optString("eventType"));
+                        event.setPersonID(eventJson.optString("personID"));
+                        event.setCity(eventJson.optString("city"));
+                        event.setCountry(eventJson.optString("country"));
+                        event.setLatitude((float) eventJson.optDouble("latitude"));
+                        event.setLongitude((float) eventJson.optDouble("longitude"));
+                        event.setYear(eventJson.optInt("year"));
+                        event.setEventID(eventJson.optString("eventID"));
+                        event.setAssociatedUsername(eventJson.optString("associatedUsername"));
 
-                    // Retrieve event details
-                    String eventType = event.optString("eventType");
-                    double latitude = event.optDouble("latitude");
-                    double longitude = event.optDouble("longitude");
-                    String eventId = event.optString("eventID");
+                        float markerColor = getMarkerColor(event.getEventType());
 
-                    // Get color for the event type
-                    float markerColor = getMarkerColor(eventType);
+                        LatLng eventLocation = new LatLng(event.getLatitude(), event.getLongitude());
+                        ClusterMarker clusterMarker = new ClusterMarker(eventLocation, event.getEventID(), event.getEventType(), event); // Update this line
+                        clusterMarker.setMarkerColor(markerColor);
 
-                    // Add a marker on the map for this event
-                    LatLng eventLocation = new LatLng(latitude, longitude);
-                    MarkerOptions markerOptions = new MarkerOptions().position(eventLocation).title(eventId).icon(BitmapDescriptorFactory.defaultMarker(markerColor));
-                    markerOptionsList.add(markerOptions);
+                        mainThreadHandler.post(() -> {
+                            clusterManager.addItem(clusterMarker);
+                            clusterManager.cluster();
+                        });
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
-            } catch (JSONException e) {
-                e.printStackTrace();
             }
-        }
-
-        return markerOptionsList;
+        });
     }
 
-    // Method to get the color for a marker based on the eventType
     private float getMarkerColor(String eventType) {
-        // Check if eventTypeColors contains eventType
         if (!eventTypeColors.containsKey(eventType)) {
-            // Add eventType to eventTypeColors with the next color in colorArray
             eventTypeColors.put(eventType, colorArray[colorIndex]);
-            // Update colorIndex
             colorIndex = (colorIndex + 1) % colorArray.length;
         }
-        // Return color for eventType
         return eventTypeColors.get(eventType);
     }
 
-    // onPostExecute method to add the MarkerOptions to the map
-    @Override
-    protected void onPostExecute(List<MarkerOptions> markerOptionsList) {
-        super.onPostExecute(markerOptionsList);
-        // Loop through markerOptionsList and add each marker to the map
-        for (MarkerOptions markerOptions : markerOptionsList) {
-            map.addMarker(markerOptions);
-        }
+    public void setMarkerColor(String eventType, float color) {
+        eventTypeColors.put(eventType, color);
     }
 }
