@@ -23,7 +23,7 @@ public class PersonActivity extends AppCompatActivity {
     private ExpandableListView expandableListView;
     private CustomExpandableListAdapter expandableListAdapter;
     private List<String> groupList;
-    private HashMap<String, List<String>> childMap;
+    private HashMap<String, List<?>> childMap;
     private Person person;
 
     @Override
@@ -64,23 +64,27 @@ public class PersonActivity extends AppCompatActivity {
         expandableListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
             @Override
             public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
-                String selectedChild = (String) expandableListAdapter.getChild(groupPosition, childPosition);
+                Object selectedChild = expandableListAdapter.getChild(groupPosition, childPosition);
 
                 if (groupPosition == 0) { // Family Members
-                    Person relatedPerson = serverProxy.getPersonFromCache(selectedChild);
+                    if (selectedChild instanceof Person) {
+                        Person relatedPerson = (Person) selectedChild;
 
-                    if (relatedPerson != null) {
-                        Intent personIntent = new Intent(PersonActivity.this, PersonActivity.class);
-                        personIntent.putExtra("personID", relatedPerson.getPersonID());
-                        startActivity(personIntent);
+                        if (relatedPerson != null) {
+                            Intent personIntent = new Intent(PersonActivity.this, PersonActivity.class);
+                            personIntent.putExtra("personID", relatedPerson.getPersonID());
+                            startActivity(personIntent);
+                        }
                     }
                 } else if (groupPosition == 1) { // Life Events
-                    Event selectedEvent = serverProxy.getEventFromCache(selectedChild);
+                    if (selectedChild instanceof Event) {
+                        Event selectedEvent = (Event) selectedChild;
 
-                    if (selectedEvent != null) {
-                        Intent eventIntent = new Intent(PersonActivity.this, EventActivity.class);
-                        eventIntent.putExtra("eventID", selectedEvent.getEventID());
-                        startActivity(eventIntent);
+                        if (selectedEvent != null) {
+                            Intent eventIntent = new Intent(PersonActivity.this, EventActivity.class);
+                            eventIntent.putExtra("eventID", selectedEvent.getEventID());
+                            startActivity(eventIntent);
+                        }
                     }
                 }
 
@@ -98,24 +102,33 @@ public class PersonActivity extends AppCompatActivity {
         groupList.add("Life Events");
 
         // Add the family members to the childMap
-        List<String> familyMembers = new ArrayList<>();
-        familyMembers.add(person.getFatherID());
-        familyMembers.add(person.getMotherID());
-        familyMembers.add(person.getSpouseID());
+        List<Person> familyMembers = new ArrayList<>();
+        Person father = serverProxy.getPersonFromCache(person.getFatherID());
+        Person mother = serverProxy.getPersonFromCache(person.getMotherID());
+        Person spouse = serverProxy.getPersonFromCache(person.getSpouseID());
+
+        if (father != null) {
+            familyMembers.add(father);
+        }
+        if (mother != null) {
+            familyMembers.add(mother);
+        }
+        if (spouse != null) {
+            familyMembers.add(spouse);
+        }
         childMap.put(groupList.get(0), familyMembers);
 
         // Add the life events to the childMap
-        List<String> lifeEvents = new ArrayList<>();
+        List<Event> lifeEvents = new ArrayList<>();
         Event[] events = serverProxy.getEventsFromCache();
 
         if (events != null) {
             for (Event event : events) {
-                if (event.getPersonID().equals(person.getPersonID())) {
-                    lifeEvents.add(event.getEventID());
+                if (event != null && event.getPersonID().equals(person.getPersonID())) {
+                    lifeEvents.add(event);
                 }
             }
         }
-
         childMap.put(groupList.get(1), lifeEvents);
     }
 

@@ -275,7 +275,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         ServerProxy serverProxy = new ServerProxy(requireContext());
         Person person = serverProxy.getPersonFromCache(authToken);
 
-        Log.d("MapFragmentDebug", "onActivityCreated: finished");
+        Log.d("MapFragmentDebug", "onActivityCreated: finished");// If initialEventID is passed as an argument, focus on the cached event's location
+        if (getArguments() != null) {
+            String initialEventID = getArguments().getString("initialEventID");
+            if (initialEventID != null) {
+                focusOnInitialEvent(initialEventID);
+            }
+        }
     }
 
     private String getAuthTokenFromStorage() {

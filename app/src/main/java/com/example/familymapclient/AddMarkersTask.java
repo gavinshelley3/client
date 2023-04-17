@@ -67,7 +67,7 @@ public class AddMarkersTask {
             colorIndex = (colorIndex + 1) % colorArray.length;
         }
         // Add a log statement here
-        Log.d("AddMarkersTaskDebug", "getMarkerColor: eventType = " + eventType + ", color = " + eventTypeColors.get(eventType));
+//        Log.d("AddMarkersTaskDebug", "getMarkerColor: eventType = " + eventType + ", color = " + eventTypeColors.get(eventType));
         return eventTypeColors.get(eventType);
     }
 
