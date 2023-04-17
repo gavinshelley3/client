@@ -1,5 +1,6 @@
 package com.example.familymapclient;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -16,6 +17,7 @@ import android.widget.Toast;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
+import Model.Person;
 import Request.LoginRequest;
 import Request.RegisterRequest;
 import Result.LoginResult;
@@ -37,6 +39,7 @@ public class LoginFragment extends Fragment {
     private Button loginButton;
     private Button registerButton;
     private ServerProxy serverProxy;
+    private Context context;
 
     // Required empty public constructor
     public LoginFragment() {
@@ -61,9 +64,9 @@ public class LoginFragment extends Fragment {
         serverHostEditText = view.findViewById(R.id.serverHostEditText);
         serverPortEditText = view.findViewById(R.id.serverPortEditText);
 
-        // Get the MainActivity instance and access the ServerProxy
-        MainActivity mainActivity = (MainActivity) getActivity();
-        ServerProxy serverProxy = mainActivity.getServerProxy();
+        // Instantiate the server proxy
+        context = getActivity();
+        serverProxy = ServerProxy.getInstance(context);
 
         // Set up interaction listeners for the Login button
         loginButton.setOnClickListener(new View.OnClickListener() {
@@ -196,22 +199,41 @@ public class LoginFragment extends Fragment {
             public void onLoginSuccess(LoginResult loginResult) {
                 if (loginResult.isSuccess()) {
                     Log.d("LoginFragment", "Login successful");
-                    serverProxy.fetchFamilyData(loginResult.getAuthtoken(), loginResult.getPersonID(), new ServerProxy.FamilyDataListener() {
-                        // Handle successful family data fetch
+                    String authToken = loginResult.getAuthtoken();
+                    String personID = loginResult.getPersonID();
+                    ServerProxy.cachePersonListener personListener = new ServerProxy.cachePersonListener() {
                         @Override
-                        public void onFamilyDataSuccess(String firstName, String lastName) {
-                            Toast.makeText(getActivity(), "Welcome, " + firstName + " " + lastName, Toast.LENGTH_SHORT).show();
+                        public void onCachePersonSuccess(Person person) {
+                            Toast.makeText(getActivity(), "Welcome, " + person.getFirstName() + " " + person.getLastName(), Toast.LENGTH_SHORT).show();
+
+                            // Create a new instance of MapFragment
+                            MapFragment mapFragment = new MapFragment();
+
+                            // Create a Bundle to store the personID
+                            Bundle args = new Bundle();
+                            args.putString("personID", person.getPersonID());
+
+                            // Set the Bundle as arguments for the MapFragment
+                            mapFragment.setArguments(args);
 
                             // Navigate to the MapFragment
-                            getActivity().getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new MapFragment()).commit();
+                            FragmentTransaction transaction = getActivity().getSupportFragmentManager().beginTransaction();
+                            transaction.replace(R.id.fragment_container, mapFragment);
+                            transaction.addToBackStack(null);
+                            transaction.commit();
                         }
 
-                        // Handle error in family data fetch
                         @Override
-                        public void onFamilyDataError(String error) {
+                        public void onCachePersonError(String error) {
                             Toast.makeText(getActivity(), "Error fetching family data: " + error, Toast.LENGTH_SHORT).show();
                         }
-                    });
+
+                        @Override
+                        public void onCachePersonCompleted(Person[] persons) {
+                            // You can implement any functionality here if needed
+                        }
+                    };
+                    serverProxy.fetchFamilyData(authToken, personID, personListener);
                 } else {
                     // Show an error message for failed login
                     Toast.makeText(getActivity(), "Login failed: " + loginResult.getMessage(), Toast.LENGTH_SHORT).show();
@@ -256,25 +278,41 @@ public class LoginFragment extends Fragment {
             public void onRegisterSuccess(RegisterResult registerResult) {
                 if (registerResult.isSuccess()) {
                     Log.d("RegisterFragment", "Register success");
-                    serverProxy.fetchFamilyData(registerResult.getAuthtoken(), registerResult.getPersonID(), new ServerProxy.FamilyDataListener() {
-                        // Handle successful family data fetch
+                    String authToken = registerResult.getAuthtoken();
+                    String personID = registerResult.getPersonID();
+                    ServerProxy.cachePersonListener personListener = new ServerProxy.cachePersonListener() {
                         @Override
-                        public void onFamilyDataSuccess(String firstName, String lastName) {
-                            Toast.makeText(getActivity(), "Welcome, " + firstName + " " + lastName, Toast.LENGTH_SHORT).show();
+                        public void onCachePersonSuccess(Person person) {
+                            Toast.makeText(getActivity(), "Welcome, " + person.getFirstName() + " " + person.getLastName(), Toast.LENGTH_SHORT).show();
+
+                            // Create a new instance of MapFragment
+                            MapFragment mapFragment = new MapFragment();
+
+                            // Create a Bundle to store the personID
+                            Bundle args = new Bundle();
+                            args.putString("personID", person.getPersonID());
+
+                            // Set the Bundle as arguments for the MapFragment
+                            mapFragment.setArguments(args);
 
                             // Navigate to the MapFragment
                             FragmentTransaction transaction = getActivity().getSupportFragmentManager().beginTransaction();
-                            transaction.replace(R.id.fragment_container, new MapFragment());
+                            transaction.replace(R.id.fragment_container, mapFragment);
                             transaction.addToBackStack(null);
                             transaction.commit();
                         }
 
-                        // Handle error in family data fetch
                         @Override
-                        public void onFamilyDataError(String error) {
+                        public void onCachePersonError(String error) {
                             Toast.makeText(getActivity(), "Error fetching family data: " + error, Toast.LENGTH_SHORT).show();
                         }
-                    });
+
+                        @Override
+                        public void onCachePersonCompleted(Person[] persons) {
+                            // You can implement any functionality here if needed
+                        }
+                    };
+                    serverProxy.fetchFamilyData(authToken, personID, personListener);
                 } else {
                     // Show an error message for failed registration
                     Toast.makeText(getActivity(), registerResult.getMessage(), Toast.LENGTH_SHORT).show();

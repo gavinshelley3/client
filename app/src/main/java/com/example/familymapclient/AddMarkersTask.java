@@ -3,6 +3,7 @@ package com.example.familymapclient;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import androidx.core.os.HandlerCompat;
 
@@ -10,10 +11,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.clustering.ClusterManager;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -22,7 +20,7 @@ import Model.Event;
 
 public class AddMarkersTask {
     private GoogleMap map;
-    private JSONObject eventsData;
+    private Event[] events;
     private HashMap<String, Float> eventTypeColors;
     private float[] colorArray;
     private int colorIndex = 0;
@@ -30,9 +28,9 @@ public class AddMarkersTask {
     private Executor executor;
     private Handler mainThreadHandler;
 
-    public AddMarkersTask(GoogleMap map, JSONObject eventsData, HashMap<String, Float> eventTypeColors, float[] colorArray, ClusterManager<ClusterMarker> clusterManager) {
+    public AddMarkersTask(GoogleMap map, Event[] events, HashMap<String, Float> eventTypeColors, float[] colorArray, ClusterManager<ClusterMarker> clusterManager) {
         this.map = map;
-        this.eventsData = eventsData;
+        this.events = events;
         this.eventTypeColors = eventTypeColors;
         this.colorArray = colorArray;
         this.clusterManager = clusterManager;
@@ -42,37 +40,23 @@ public class AddMarkersTask {
 
     public void execute() {
         executor.execute(() -> {
-            if (eventsData != null) {
-                try {
-                    JSONArray eventsArray = eventsData.getJSONArray("data");
-                    for (int i = 0; i < eventsArray.length(); i++) {
-                        JSONObject eventJson = eventsArray.getJSONObject(i);
+            if (events != null) {
+                // Add a log statement here
+                Log.d("AddMarkersTaskDebug", "execute: adding markers for events - " + Arrays.toString(events));
+                for (Event event : events) {
+                    float markerColor = getMarkerColor(event.getEventType());
 
-                        Event event = new Event();
-                        event.setEventType(eventJson.optString("eventType"));
-                        event.setPersonID(eventJson.optString("personID"));
-                        event.setCity(eventJson.optString("city"));
-                        event.setCountry(eventJson.optString("country"));
-                        event.setLatitude((float) eventJson.optDouble("latitude"));
-                        event.setLongitude((float) eventJson.optDouble("longitude"));
-                        event.setYear(eventJson.optInt("year"));
-                        event.setEventID(eventJson.optString("eventID"));
-                        event.setAssociatedUsername(eventJson.optString("associatedUsername"));
+                    LatLng eventLocation = new LatLng(event.getLatitude(), event.getLongitude());
+                    ClusterMarker clusterMarker = new ClusterMarker(eventLocation, event.getEventID(), event.getEventType(), event);
+                    clusterMarker.setMarkerColor(markerColor);
 
-                        float markerColor = getMarkerColor(event.getEventType());
-
-                        LatLng eventLocation = new LatLng(event.getLatitude(), event.getLongitude());
-                        ClusterMarker clusterMarker = new ClusterMarker(eventLocation, event.getEventID(), event.getEventType(), event); // Update this line
-                        clusterMarker.setMarkerColor(markerColor);
-
-                        mainThreadHandler.post(() -> {
-                            clusterManager.addItem(clusterMarker);
-                            clusterManager.cluster();
-                        });
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
+                    mainThreadHandler.post(() -> {
+                        clusterManager.addItem(clusterMarker);
+                        clusterManager.cluster();
+                    });
                 }
+                // Add a log statement here
+                Log.d("AddMarkersTaskDebug", "execute: finished adding markers for events - " + Arrays.toString(events));
             }
         });
     }
@@ -82,6 +66,8 @@ public class AddMarkersTask {
             eventTypeColors.put(eventType, colorArray[colorIndex]);
             colorIndex = (colorIndex + 1) % colorArray.length;
         }
+        // Add a log statement here
+        Log.d("AddMarkersTaskDebug", "getMarkerColor: eventType = " + eventType + ", color = " + eventTypeColors.get(eventType));
         return eventTypeColors.get(eventType);
     }
 

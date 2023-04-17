@@ -18,6 +18,11 @@
         android:theme="@style/Theme.FamilyMapClient"
         tools:targetApi="31">
         <activity
+            android:name=".EventActivity"
+            android:exported="false"
+            android:label="@string/title_activity_event"
+            android:theme="@style/Theme.FamilyMapClient" />
+        <activity
             android:name=".PersonActivity"
             android:exported="false" />
         <activity

@@ -12,7 +12,7 @@ public class ClusterMarker implements ClusterItem {
     private float markerColor;
     private Event event;
 
-    public ClusterMarker(LatLng position, String title, String snippet, Event event) { // Update this line
+    public ClusterMarker(LatLng position, String title, String snippet, Event event) {
         this.position = position;
         this.title = title;
         this.snippet = snippet;

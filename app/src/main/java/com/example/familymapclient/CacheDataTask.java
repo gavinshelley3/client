@@ -6,90 +6,92 @@ import android.util.Log;
 
 import androidx.core.os.HandlerCompat;
 
-import org.json.JSONObject;
-
+import java.util.Arrays;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import Model.Event;
+import Model.Person;
 
 public class CacheDataTask {
-    private ServerProxy.cacheEventListener listener;
+    private ServerProxy.cacheEventListener eventListener;
+    private ServerProxy.cachePersonListener personListener;
     private ServerProxy serverProxy;
     private Executor executor;
     private Handler mainThreadHandler;
+    private AtomicInteger tasksCompleted = new AtomicInteger(0);
 
-    // Constructor to initialize server proxy, cache event listener and executor
-    public CacheDataTask(ServerProxy serverProxy, ServerProxy.cacheEventListener listener) {
+    // Constructor to initialize server proxy, cache event listener, cache person listener, and executor
+    public CacheDataTask(ServerProxy serverProxy, ServerProxy.cacheEventListener eventListener, ServerProxy.cachePersonListener personListener) {
         this.serverProxy = serverProxy;
-        this.listener = listener;
+        this.eventListener = eventListener;
+        this.personListener = personListener;
         this.executor = Executors.newSingleThreadExecutor();
         this.mainThreadHandler = HandlerCompat.createAsync(Looper.getMainLooper());
     }
 
-    // This method performs the caching task in the background thread
     public void execute(String authToken) {
-        Log.d("CacheDataTaskDebug", "execute: started");
+        Log.d("CacheDataTaskDebug", "CacheDataTaskDebugExecute: started");
+        Log.d("CacheDataTaskDebug", "CacheDataTaskDebugExecute: authToken - " + authToken);
 
         executor.execute(() -> {
-            // Cache the events data using the server proxy
-            try {
-                serverProxy.cacheEvents(authToken, new ServerProxy.cacheEventListener() {
-                    // Handle the success of the cache event
-                    @Override
-                    public void onCacheEventSuccess(String message) {
-                        Log.d("CacheDataTaskDebug", "onCacheEventSuccess: " + message);
-                        // Retrieve the cached data
-                        JSONObject jsonObject = serverProxy.getEventsFromCache("events");
-                        Log.d("CacheDataTaskDebug", "getEventsFromCacheAfter: " + jsonObject.toString());
-                        // Notify the listener about the completion of the cache event task
-                        mainThreadHandler.post(() -> {
-                            if (listener != null) {
-                                listener.onCacheEventCompleted(jsonObject);
-                            }
-                        });
-                    }
+            // Cache the events data
+            serverProxy.cacheEvents(authToken, new ServerProxy.cacheEventListener() {
+                @Override
+                public void onCacheEventSuccess(String message) {
+                    Log.d("CacheDataTaskDebug", "onCacheEventSuccess: " + message);
+                    checkIfBothTasksCompleted();
+                }
 
-                    // Handle the error of the cache event
-                    @Override
-                    public void onCacheEventError(String error) {
-                        Log.d("ServerProxy", "onCacheEventError: " + error);
-                    }
-                });
-            } catch (Exception e) {
-                Log.d("CacheDataTaskDebug", "getEventsError: " + e.getMessage());
-            }
-
-            // Retrieve the cached data
-            JSONObject jsonObject = serverProxy.getEventsFromCache("events");
-            Log.d("CacheDataTaskDebug", "getEventsFromCacheAfter: " + jsonObject.toString());
-
-            Log.d("CacheDataTaskDebug", "execute:finished");
-
-            // Notify the listener about the completion of the cache event task
-            mainThreadHandler.post(() -> {
-                if (listener != null) {
-                    listener.onCacheEventCompleted(jsonObject);
+                @Override
+                public void onCacheEventError(String error) {
+                    Log.d("ServerProxy", "onCacheEventError: " + error);
                 }
             });
 
-            // Cache the persons data using the server proxy
-            try {
-                serverProxy.cachePersons(authToken, new ServerProxy.cacheEventListener() {
-                    // Handle the success of the cache persons
-                    @Override
-                    public void onCacheEventSuccess(String message) {
-                        Log.d("CacheDataTaskDebug", "onCachePersonsSuccess: " + message);
-                    }
+            // Cache the persons data
+            serverProxy.cachePersons(authToken, new ServerProxy.cachePersonListener() {
+                @Override
+                public void onCachePersonSuccess(Person person) {
+                    Log.d("CacheDataTaskDebug", "onCachePersonsSuccess: ");
+                    checkIfBothTasksCompleted();
+                }
 
-                    // Handle the error of the cache persons
-                    @Override
-                    public void onCacheEventError(String error) {
-                        Log.d("CacheDataTaskDebug", "onCachePersonsError: " + error);
-                    }
-                });
-            } catch (Exception e) {
-                Log.d("CacheDataTaskDebug", "getPersonsError: " + e.getMessage());
-            }
+                @Override
+                public void onCachePersonError(String error) {
+                    Log.d("CacheDataTaskDebug", "onCachePersonsError: " + error);
+                }
+
+                @Override
+                public void onCachePersonCompleted(Person[] persons) {
+                    // Return the persons array
+                    Log.d("CacheDataTaskDebug", "onCachePersonsCompleted: " + Arrays.toString(persons));
+                }
+            });
         });
     }
-}
 
+    private void checkIfBothTasksCompleted() {
+        if (tasksCompleted.incrementAndGet() == 2) {
+            Event[] events = serverProxy.getEventsFromCache();
+            Log.d("CacheDataTaskDebug", "checkIfBothTasksCompleted: " + Arrays.toString(events));
+            mainThreadHandler.post(() -> {
+                // Add a log statement here
+                Log.d("CacheDataTaskDebug", "checkIfBothTasksCompleted: " + Arrays.toString(events));
+                eventListener.onCacheEventCompleted(events);
+            });
+
+            Person[] persons = serverProxy.getPersonsFromCache();
+            Log.d("CacheDataTaskDebug", "checkIfBothTasksCompleted: " + Arrays.toString(persons));
+            mainThreadHandler.post(() -> {
+                // Add a log statement here
+                Log.d("CacheDataTaskDebug", "checkIfBothTasksCompleted: " + Arrays.toString(persons));
+                personListener.onCachePersonCompleted(persons);
+            });
+        } else {
+            // Add a log statement here
+            Log.d("CacheDataTaskDebug", "checkIfBothTasksCompleted: only " + tasksCompleted.get() + " tasks completed");
+        }
+    }
+}
