@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -27,9 +28,11 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.view.DefaultClusterRenderer;
+import com.google.maps.android.collections.MarkerManager;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -49,6 +52,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private Event currentEvent;
     private Person currentPerson;
     private ServerProxy.cacheEventListener cacheListener;
+    private EventLineManager eventLineManager;
+    private AddMarkersTask addMarkersTask;
+    private boolean isMapReady = false;
+    private MapData mapData;
 
     public MapFragment() {
         // Required empty public constructor
@@ -90,6 +97,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         inflater.inflate(R.menu.map_options_menu, menu);
     }
 
+//    @Override
+//    public void onSaveInstanceState(@NonNull Bundle outState) {
+//        super.onSaveInstanceState(outState);
+//
+//        // Save the state of your MapFragment here
+//        mapData = new MapData(currentPersonID, currentEvent, currentPerson);
+//        outState.putSerializable("mapData", mapData);
+//    }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -110,15 +126,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         MapsInitializer.initialize(getActivity());
 
-        // Set a default location and zoom level
-        LatLng defaultLocation = new LatLng(40.2338, -111.6585);
-        map.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 5));
-
         // Setup the ClusterManager
         clusterManager = new ClusterManager<>(getActivity(), map);
         map.setOnCameraIdleListener(clusterManager);
-
-        // Add the following two lines
         map.setOnMarkerClickListener(clusterManager);
         map.setOnInfoWindowClickListener(clusterManager);
 
@@ -157,6 +167,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 // Update the map with the cached data
                 Log.d("MapFragment", "onCacheEventCompleted: " + Arrays.toString(events));
                 setupEventMarkers(events);
+
+                addMarkersTask = new AddMarkersTask(map, events, eventTypeColors, colorArray, clusterManager);
+                eventLineManager = new EventLineManager(map, addMarkersTask);
+
+                eventLineManager.drawLinesBetweenSameTypeEvents(events);
+
+                // If initialEventID is passed as an argument, focus on the cached event's location
+                if (getArguments() != null) {
+                    String initialEventID = getArguments().getString("initialEventID");
+                    if (initialEventID != null) {
+                        focusOnInitialEvent(initialEventID);
+                    }
+                }
+
+                // Refresh the map
+                refreshMap();
             }
         };
 
@@ -184,11 +210,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         focusOnCachedPerson(person);
                     }
                 }
+
+                // Refresh the map
+                refreshMap();
             }
         };
 
         // Create and execute the CacheDataTask
-        CacheDataTask cacheDataTask = new CacheDataTask(serverProxy, eventListener, personListener);
+        String initialEventID = getArguments() != null ? getArguments().getString("initialEventID") : null;
+        CacheDataTask cacheDataTask = new CacheDataTask(serverProxy, eventListener, personListener, initialEventID);
         cacheDataTask.execute(authToken);
 
         // If personID is passed as an argument, focus on the cached person's birth location
@@ -199,10 +229,34 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 focusOnCachedPerson(person);
             }
         }
+
+        // Set the map ready flag
+        isMapReady = true;
+
+        // Focus on the initial event or cached person if the map is ready
+        if (getArguments() != null) {
+            initialEventID = getArguments().getString("initialEventID");
+            if (initialEventID != null) {
+                focusOnInitialEvent(initialEventID);
+                selectMarker(initialEventID);
+            } else {
+                String personID = getArguments().getString("personID");
+                if (personID != null) {
+                    Person person = serverProxy.getPersonFromCache(personID);
+                    focusOnCachedPerson(person);
+                }
+            }
+        }
+
+
     }
 
     private void setupEventMarkers(Event[] events) {
         AddMarkersTask addMarkersTask = new AddMarkersTask(map, events, eventTypeColors, colorArray, clusterManager);
+        // Log eventTypes
+        Log.d("MapFragment", "eventTypeColors: " + Arrays.toString(eventTypeColors.keySet().toArray()));
+        // Log events
+        Log.d("MapFragment", "setupEventMarkersEvents: " + Arrays.toString(events));
         addMarkersTask.execute();
     }
 
@@ -229,6 +283,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             String eventInfo = firstName + " " + lastName + "\n" + event.getEventType().toUpperCase() + ": " + event.getCity() + ", " + event.getCountry() + "(" + event.getYear() + ")";
             eventInfoTextView.setText(eventInfo);
 
+            // Change the TextView background color to match the marker color
+            float markerColor = item.getMarkerColor();
+            int markerColorInt = floatToColor(markerColor);
+            eventInfoTextView.setBackgroundColor(markerColorInt);
+            // Log the marker color
+            Log.d("MapFragment", "updateEventInfoTextViewMarkerColor: " + markerColorInt);
+
+
             // Set the gender icon
             if (gender.equalsIgnoreCase("m")) {
                 Drawable maleIcon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_male_lg);
@@ -241,11 +303,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
             // Add some padding between the icon and the text
             eventInfoTextView.setCompoundDrawablePadding(5);
-
-            // Change the TextView background color to match the marker color
-            float markerColor = item.getMarkerColor();
-            int markerColorInt = floatToColor(markerColor);
-            eventInfoTextView.setBackgroundColor(markerColorInt);
         }
     }
 
@@ -266,6 +323,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
+//        if (savedInstanceState != null) {
+//            // Restore the state of your MapFragment here
+//            mapData = (MapData) savedInstanceState.getSerializable("mapData");
+//            if (mapData != null) {
+//                currentPersonID = mapData.getCurrentPersonID();
+//                currentEvent = mapData.getCurrentEvent();
+//                currentPerson = mapData.getCurrentPerson();
+//            }
+//        }
+
         Log.d("MapFragmentDebug", "onActivityCreated: started");
 
         // Retrieve the authToken from cache
@@ -273,13 +340,21 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         // Get the cached family data
         ServerProxy serverProxy = new ServerProxy(requireContext());
-        Person person = serverProxy.getPersonFromCache(authToken);
+        Person person = new Person();
 
-        Log.d("MapFragmentDebug", "onActivityCreated: finished");// If initialEventID is passed as an argument, focus on the cached event's location
-        if (getArguments() != null) {
+        Log.d("MapFragmentDebug", "onActivityCreated: finished");
+        // If initialEventID is passed as an argument and the map is ready, focus on the cached event's location
+        if (getArguments() != null && isMapReady) {
             String initialEventID = getArguments().getString("initialEventID");
             if (initialEventID != null) {
                 focusOnInitialEvent(initialEventID);
+                selectMarker(initialEventID);
+            } else {
+                String personID = getArguments().getString("personID");
+                if (personID != null) {
+                    person = serverProxy.getPersonFromCache(personID);
+                    focusOnCachedPerson(person);
+                }
             }
         }
     }
@@ -311,17 +386,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private void focusOnInitialEvent(String eventID) {
         if (eventID != null && map != null) {
             Event event = serverProxy.getEventFromCache(eventID);
-
+            Log.d("MapFragment", "focusOnInitialEvent: event = " + event);
             if (event != null) {
                 LatLng eventLocation = new LatLng(event.getLatitude(), event.getLongitude());
-                map.moveCamera(CameraUpdateFactory.newLatLngZoom(eventLocation, 10));
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(eventLocation, 5));
 
-                for (ClusterMarker item : clusterManager.getAlgorithm().getItems()) {
-                    if (eventID.equals(item.getEvent().getEventID())) {
-                        updateEventInfoTextView(item);
-                        break;
-                    }
-                }
+                // Create a ClusterMarker object for the event
+                ClusterMarker clusterMarker = new ClusterMarker(eventLocation, event.getEventType().toUpperCase(), event.getCity() + ", " + event.getCountry() + "(" + event.getYear() + ")", event);
+
+                // Log item info
+                Log.d("MapFragment", "focusOnInitialEvent: item = " + clusterMarker);
+                updateEventInfoTextView(clusterMarker); // Directly call the update method with the required item
+                selectMarker(eventID);
             }
         }
     }
@@ -329,6 +405,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private void focusOnCachedPerson(Person person) {
         if (person != null && map != null) {
             String personID = person.getPersonID();
+            Log.d("MapFragment", "focusOnCachedPerson: personID = " + personID);
             // Instantiate the server proxy
             context = getActivity();
             serverProxy = ServerProxy.getInstance(context);
@@ -337,17 +414,37 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             if (events != null) {
                 for (Event event : events) {
                     if (personID.equals(event.getPersonID())) {
+                        String eventID = event.getEventID();
                         LatLng eventLocation = new LatLng(event.getLatitude(), event.getLongitude());
                         map.moveCamera(CameraUpdateFactory.newLatLngZoom(eventLocation, 5));
 
-                        for (ClusterMarker item : clusterManager.getAlgorithm().getItems()) {
-                            if (event.getEventID().equals(item.getEvent().getEventID())) {
-                                updateEventInfoTextView(item);
-                                break;
-                            }
-                        }
+                        // Create a ClusterMarker object for the event
+                        ClusterMarker clusterMarker = new ClusterMarker(eventLocation, event.getEventType().toUpperCase(), event.getCity() + ", " + event.getCountry() + "(" + event.getYear() + ")", event);
+
+                        // Log item info
+                        Log.d("MapFragment", "focusOnInitialEvent: item = " + clusterMarker);
+                        updateEventInfoTextView(clusterMarker); // Directly call the update method with the required item
                         break;
                     }
+                    // Get eventID from person then select the marker
+                    selectMarker(event.getEventID());
+                }
+            }
+        }
+    }
+
+    private void selectMarker(String eventID) {
+        if (eventID != null && map != null) {
+            for (ClusterMarker item : clusterManager.getAlgorithm().getItems()) {
+                if (eventID.equals(item.getEvent().getEventID())) {
+                    MarkerManager.Collection markerCollection = clusterManager.getMarkerCollection();
+                    for (Marker marker : markerCollection.getMarkers()) {
+                        if (marker.getTitle().equals(item.getTitle())) {
+                            marker.showInfoWindow();
+                            break;
+                        }
+                    }
+                    break;
                 }
             }
         }
@@ -357,6 +454,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         Intent intent = new Intent(getActivity(), PersonActivity.class);
         intent.putExtra("personID", currentPersonID);
         startActivity(intent);
+    }
+
+    private void refreshMap() {
+        if (map != null) {
+            map.moveCamera(CameraUpdateFactory.zoomTo(map.getCameraPosition().zoom));
+        }
     }
 
     @Override

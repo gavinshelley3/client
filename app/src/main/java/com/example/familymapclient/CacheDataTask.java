@@ -21,14 +21,16 @@ public class CacheDataTask {
     private Executor executor;
     private Handler mainThreadHandler;
     private AtomicInteger tasksCompleted = new AtomicInteger(0);
+    private String initialEventID;
 
     // Constructor to initialize server proxy, cache event listener, cache person listener, and executor
-    public CacheDataTask(ServerProxy serverProxy, ServerProxy.cacheEventListener eventListener, ServerProxy.cachePersonListener personListener) {
+    public CacheDataTask(ServerProxy serverProxy, ServerProxy.cacheEventListener eventListener, ServerProxy.cachePersonListener personListener, String initialEventID) {
         this.serverProxy = serverProxy;
         this.eventListener = eventListener;
         this.personListener = personListener;
         this.executor = Executors.newSingleThreadExecutor();
         this.mainThreadHandler = HandlerCompat.createAsync(Looper.getMainLooper());
+        this.initialEventID = initialEventID;
     }
 
     public void execute(String authToken) {

@@ -44,7 +44,7 @@ public class AddMarkersTask {
                 // Add a log statement here
                 Log.d("AddMarkersTaskDebug", "execute: adding markers for events - " + Arrays.toString(events));
                 for (Event event : events) {
-                    float markerColor = getMarkerColor(event.getEventType());
+                    float markerColor = getMarkerColor(event.getEventType().toUpperCase());
 
                     LatLng eventLocation = new LatLng(event.getLatitude(), event.getLongitude());
                     ClusterMarker clusterMarker = new ClusterMarker(eventLocation, event.getEventID(), event.getEventType(), event);
@@ -66,9 +66,11 @@ public class AddMarkersTask {
             eventTypeColors.put(eventType, colorArray[colorIndex]);
             colorIndex = (colorIndex + 1) % colorArray.length;
         }
-        // Add a log statement here
-//        Log.d("AddMarkersTaskDebug", "getMarkerColor: eventType = " + eventType + ", color = " + eventTypeColors.get(eventType));
         return eventTypeColors.get(eventType);
+    }
+
+    public float getMarkerColorForEventType(String eventType) {
+        return getMarkerColor(eventType);
     }
 
     public void setMarkerColor(String eventType, float color) {

@@ -3,6 +3,7 @@ package com.example.familymapclient;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ExpandableListView;
 import android.widget.TextView;
@@ -207,6 +208,18 @@ public class PersonActivity extends AppCompatActivity {
         }
 
         return relatedEvents;
+    }
+
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+
+        // If the Up button is pressed, navigate back to the MainActivity
+        if (id == android.R.id.home) {
+            finish();
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     private AppCompatActivity getActivity() {
