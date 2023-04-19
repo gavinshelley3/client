@@ -16,7 +16,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Initialize the ServerProxy instance
-        serverProxy = new ServerProxy(this);
+        serverProxy = ServerProxy.getInstance(this);
 
         // Replace the fragment_container with a new LoginFragment
         FragmentManager fragmentManager = getSupportFragmentManager();

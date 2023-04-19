@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:context=".SettingsActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="7"
+        android:orientation="vertical">
+
+        <!-- Add UI components for settings here -->
+
+        <Switch
+            android:id="@+id/spouse_lines_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:checked="true"
+            android:text="Spouse Lines"
+            android:textColor="#FF3700B3"
+            android:trackTint="#FF3700B3" />
+
+        <Switch
+            android:id="@+id/family_tree_lines_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:checked="true"
+            android:text="Family Tree Lines"
+            android:textColor="#FF3700B3"
+            android:trackTint="#FF3700B3" />
+
+        <Switch
+            android:id="@+id/life_story_line_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:checked="true"
+            android:text="Life Story Line"
+            android:textColor="#FF3700B3"
+            android:trackTint="#FF3700B3" />
+
+        <Switch
+            android:id="@+id/filter_gender_male_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:checked="true"
+            android:text="Filter male events"
+            android:textColor="#FF3700B3"
+            android:trackTint="#FF3700B3" />
+
+        <Switch
+            android:id="@+id/filter_gender_female_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:checked="true"
+            android:text="Filter female events"
+            android:textColor="#FF3700B3"
+            android:trackTint="#FF3700B3" />
+
+        <Switch
+            android:id="@+id/filter_side_father_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:checked="true"
+            android:text="Father's Side"
+            android:textColor="#FF3700B3"
+            android:trackTint="#FF3700B3" />
+
+        <Switch
+            android:id="@+id/filter_side_mother_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:checked="true"
+            android:text="Mother's Side"
+            android:textColor="#FF3700B3"
+            android:trackTint="#FF3700B3" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/save_settings_button"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_weight="1"
+            android:backgroundTint="#FF3700B3"
+
+            android:text="Save Settings"
+            android:textColor="@android:color/white" />
+
+        <Button
+            android:id="@+id/logout_button"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_weight="1"
+            android:backgroundTint="#FF3700B3"
+            android:text="Logout"
+            android:textColor="@android:color/white" />
+
+    </LinearLayout>
+
+</LinearLayout>

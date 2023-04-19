@@ -17,7 +17,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -52,10 +51,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private Event currentEvent;
     private Person currentPerson;
     private ServerProxy.cacheEventListener cacheListener;
-    private EventLineManager eventLineManager;
-    private AddMarkersTask addMarkersTask;
+    private MapEventManager mapEventManager;
     private boolean isMapReady = false;
     private MapData mapData;
+    private Person selectedPerson;
 
     public MapFragment() {
         // Required empty public constructor
@@ -97,15 +96,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         inflater.inflate(R.menu.map_options_menu, menu);
     }
 
-//    @Override
-//    public void onSaveInstanceState(@NonNull Bundle outState) {
-//        super.onSaveInstanceState(outState);
-//
-//        // Save the state of your MapFragment here
-//        mapData = new MapData(currentPersonID, currentEvent, currentPerson);
-//        outState.putSerializable("mapData", mapData);
-//    }
-
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -114,6 +104,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 return true;
             case R.id.action_settings:
                 // Handle settings action
+                Intent intent = new Intent(getActivity(), SettingsActivity.class);
+                startActivity(intent);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -153,25 +145,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         // Initialize the cacheListener for events
         ServerProxy.cacheEventListener eventListener = new ServerProxy.cacheEventListener() {
             @Override
-            public void onCacheEventSuccess(String message) {
-                Log.d("ServerProxy", "onResponse: " + message);
-            }
-
-            @Override
-            public void onCacheEventError(String error) {
-                Log.d("ServerProxy", "onResponse: " + error);
-            }
-
-            @Override
-            public void onCacheEventCompleted(Event[] events) {
+            public void onCacheEventSuccess(Event[] events) {
                 // Update the map with the cached data
                 Log.d("MapFragment", "onCacheEventCompleted: " + Arrays.toString(events));
                 setupEventMarkers(events);
-
-                addMarkersTask = new AddMarkersTask(map, events, eventTypeColors, colorArray, clusterManager);
-                eventLineManager = new EventLineManager(map, addMarkersTask);
-
-                eventLineManager.drawLinesBetweenSameTypeEvents(events);
 
                 // If initialEventID is passed as an argument, focus on the cached event's location
                 if (getArguments() != null) {
@@ -184,23 +161,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 // Refresh the map
                 refreshMap();
             }
+
+            @Override
+            public void onCacheEventError(String error) {
+                Log.d("ServerProxy", "onResponse: " + error);
+            }
         };
 
         // Initialize the cacheListener for persons
         ServerProxy.cachePersonListener personListener = new ServerProxy.cachePersonListener() {
             @Override
-            public void onCachePersonSuccess(Person person) {
+            public void onCacheSinglePersonSuccess(Person person) {
                 // Update the map with the cached data
                 focusOnCachedPerson(person);
             }
 
             @Override
-            public void onCachePersonError(String error) {
-                Log.d("MapFragment", "onCachePersonError: " + error);
-            }
-
-            @Override
-            public void onCachePersonCompleted(Person[] persons) {
+            public void onCacheMultiplePersonsSuccess(Person[] persons) {
                 // Navigate to person's birth location
                 Bundle args = getArguments();
                 if (args != null) {
@@ -214,11 +191,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 // Refresh the map
                 refreshMap();
             }
+
+            @Override
+            public void onCachePersonError(String error) {
+                Log.d("MapFragment", "onCachePersonError: " + error);
+            }
         };
 
         // Create and execute the CacheDataTask
         String initialEventID = getArguments() != null ? getArguments().getString("initialEventID") : null;
-        CacheDataTask cacheDataTask = new CacheDataTask(serverProxy, eventListener, personListener, initialEventID);
+        CacheDataTask cacheDataTask = new CacheDataTask(serverProxy, eventListener, personListener);
         cacheDataTask.execute(authToken);
 
         // If personID is passed as an argument, focus on the cached person's birth location
@@ -247,17 +229,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 }
             }
         }
-
-
     }
 
     private void setupEventMarkers(Event[] events) {
-        AddMarkersTask addMarkersTask = new AddMarkersTask(map, events, eventTypeColors, colorArray, clusterManager);
-        // Log eventTypes
-        Log.d("MapFragment", "eventTypeColors: " + Arrays.toString(eventTypeColors.keySet().toArray()));
-        // Log events
-        Log.d("MapFragment", "setupEventMarkersEvents: " + Arrays.toString(events));
-        addMarkersTask.execute();
+        mapEventManager = new MapEventManager(map, events, eventTypeColors, colorArray, clusterManager, getFilterSettings(), getActivity());
+        mapEventManager.execute(selectedPerson);
     }
 
     private void updateEventInfoTextView(ClusterMarker item) {
@@ -273,6 +249,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         // Retrieve the person object from the cache based on the personID
         Person person = serverProxy.getPersonFromCache(personID);
+        selectedPerson = person;
         Log.d("MapFragment", "updateEventInfoTextView: " + person);
 
         if (person != null) {
@@ -306,7 +283,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-
     class CustomClusterRenderer extends DefaultClusterRenderer<ClusterMarker> {
         public CustomClusterRenderer(Context context, GoogleMap map, ClusterManager<ClusterMarker> clusterManager) {
             super(context, map, clusterManager);
@@ -339,7 +315,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         String authToken = getAuthTokenFromStorage();
 
         // Get the cached family data
-        ServerProxy serverProxy = new ServerProxy(requireContext());
+        serverProxy = ServerProxy.getInstance(getActivity());
         Person person = new Person();
 
         Log.d("MapFragmentDebug", "onActivityCreated: finished");
@@ -359,7 +335,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    private String getAuthTokenFromStorage() {
+    public String getAuthTokenFromStorage() {
         SharedPreferences sharedPreferences = requireContext().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE);
         String authToken = sharedPreferences.getString("authToken", null);
         Log.d("MapFragmentDebug", "getAuthTokenFromStorage: authToken = " + authToken);
@@ -450,22 +426,62 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+    private boolean[] getFilterSettings() {
+        SharedPreferences sharedPreferences = requireContext().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE);
+        boolean[] filterSettings = new boolean[7];
+
+        filterSettings[0] = sharedPreferences.getBoolean("spouseLinesEnabled", true);
+        filterSettings[1] = sharedPreferences.getBoolean("familyTreeLinesEnabled", true);
+        filterSettings[2] = sharedPreferences.getBoolean("lifeStoryLineEnabled", true);
+        filterSettings[3] = sharedPreferences.getBoolean("filterGenderMale", true);
+        filterSettings[4] = sharedPreferences.getBoolean("filterGenderFemale", true);
+        filterSettings[5] = sharedPreferences.getBoolean("filterSideMother", true);
+        filterSettings[6] = sharedPreferences.getBoolean("filterSideFather", true);
+
+        return filterSettings;
+    }
+
     private void openPersonActivity() {
         Intent intent = new Intent(getActivity(), PersonActivity.class);
         intent.putExtra("personID", currentPersonID);
         startActivity(intent);
     }
 
-    private void refreshMap() {
-        if (map != null) {
-            map.moveCamera(CameraUpdateFactory.zoomTo(map.getCameraPosition().zoom));
+    // Method to refresh the map and filter lines
+    public void refreshMap() {
+        // Get the cached family data
+        Event[] events = serverProxy.getEventsFromCache();
+
+        // Clear the map
+        if (clusterManager != null) {
+            clusterManager.clearItems();
         }
+
+        // Add the filtered events to the map
+        if (events != null && mapEventManager != null) {
+            mapEventManager.execute(selectedPerson);
+        }
+
+        // Refresh the map
+        if (clusterManager != null) {
+            clusterManager.cluster();
+        }
+    }
+
+    private Person getSelectedPerson() {
+        return selectedPerson;
+    }
+
+    private void setSelectPerson() {
+
     }
 
     @Override
     public void onResume() {
         super.onResume();
         mapView.onResume();
+        // Refresh the map
+        refreshMap();
     }
 
     @Override

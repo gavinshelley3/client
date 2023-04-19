@@ -203,7 +203,7 @@ public class LoginFragment extends Fragment {
                     String personID = loginResult.getPersonID();
                     ServerProxy.cachePersonListener personListener = new ServerProxy.cachePersonListener() {
                         @Override
-                        public void onCachePersonSuccess(Person person) {
+                        public void onCacheSinglePersonSuccess(Person person) {
                             Toast.makeText(getActivity(), "Welcome, " + person.getFirstName() + " " + person.getLastName(), Toast.LENGTH_SHORT).show();
 
                             // Create a new instance of MapFragment
@@ -224,13 +224,13 @@ public class LoginFragment extends Fragment {
                         }
 
                         @Override
-                        public void onCachePersonError(String error) {
-                            Toast.makeText(getActivity(), "Error fetching family data: " + error, Toast.LENGTH_SHORT).show();
+                        public void onCacheMultiplePersonsSuccess(Person[] persons) {
+                            // You can implement any functionality here if needed
                         }
 
                         @Override
-                        public void onCachePersonCompleted(Person[] persons) {
-                            // You can implement any functionality here if needed
+                        public void onCachePersonError(String error) {
+                            Toast.makeText(getActivity(), "Error fetching family data: " + error, Toast.LENGTH_SHORT).show();
                         }
                     };
                     serverProxy.fetchFamilyData(authToken, personID, personListener);
@@ -282,7 +282,7 @@ public class LoginFragment extends Fragment {
                     String personID = registerResult.getPersonID();
                     ServerProxy.cachePersonListener personListener = new ServerProxy.cachePersonListener() {
                         @Override
-                        public void onCachePersonSuccess(Person person) {
+                        public void onCacheSinglePersonSuccess(Person person) {
                             Toast.makeText(getActivity(), "Welcome, " + person.getFirstName() + " " + person.getLastName(), Toast.LENGTH_SHORT).show();
 
                             // Create a new instance of MapFragment
@@ -303,14 +303,15 @@ public class LoginFragment extends Fragment {
                         }
 
                         @Override
+                        public void onCacheMultiplePersonsSuccess(Person[] persons) {
+                            // You can implement any functionality here if needed
+                        }
+
+                        @Override
                         public void onCachePersonError(String error) {
                             Toast.makeText(getActivity(), "Error fetching family data: " + error, Toast.LENGTH_SHORT).show();
                         }
 
-                        @Override
-                        public void onCachePersonCompleted(Person[] persons) {
-                            // You can implement any functionality here if needed
-                        }
                     };
                     serverProxy.fetchFamilyData(authToken, personID, personListener);
                 } else {
