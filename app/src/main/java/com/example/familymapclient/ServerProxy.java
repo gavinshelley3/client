@@ -174,7 +174,10 @@ public class ServerProxy {
                 Person person = new Person(firstName, lastName, gender, personID1, fatherID, motherID, spouseID, associatedUsername);
 
                 // Set person to loggedInUser
-                loggedInUser = person;
+                setLoggedInUser(person);
+
+                // Add person to cache based on string "loggedInUser"
+                addToCache("loggedInUser", person);
 
                 // Add person to cache based on personID
                 addToCache(authToken, person);
@@ -310,7 +313,7 @@ public class ServerProxy {
 
     // Method to get a single Person from the cache
     public Person getPersonFromCache(String personID) {
-        Log.d("ServerProxy", "getPersonFromCache: personID = " + personID);
+//        Log.d("ServerProxy", "getPersonFromCache: personID = " + personID);
         return getObjectFromCache(personID, Person.class);
     }
 
@@ -322,6 +325,20 @@ public class ServerProxy {
 
     // Getter and Setter methods to save the logged in user's Person
     public Person getLoggedInUser() {
+        // If the loggedInUser is null, try to get it from cache
+        if (loggedInUser == null) {
+            Cache.Entry cacheEntry = requestQueue.getCache().get("loggedInUser");
+            if (cacheEntry != null) {
+                try {
+                    String jsonString = new String(cacheEntry.data, StandardCharsets.UTF_8);
+                    loggedInUser = new Gson().fromJson(jsonString, Person.class);
+                    setLoggedInUser(loggedInUser);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        Log.d("ServerProxy", "getLoggedInUser: loggedInUser = " + loggedInUser);
         return loggedInUser;
     }
 

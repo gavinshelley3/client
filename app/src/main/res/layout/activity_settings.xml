@@ -53,7 +53,7 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:checked="true"
-            android:text="Filter male events"
+            android:text="Male events"
             android:textColor="#FF3700B3"
             android:trackTint="#FF3700B3" />
 
@@ -63,7 +63,7 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:checked="true"
-            android:text="Filter female events"
+            android:text="Female events"
             android:textColor="#FF3700B3"
             android:trackTint="#FF3700B3" />
 
