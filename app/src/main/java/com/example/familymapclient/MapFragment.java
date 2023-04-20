@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -42,11 +43,8 @@ import Model.Event;
 import Model.Person;
 
 public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleMap.OnMapLoadedCallback {
-
     private MapView mapView;
     private GoogleMap map;
-    private HashMap<String, Float> eventTypeColors = new HashMap<>();
-    private float[] colorArray = {BitmapDescriptorFactory.HUE_AZURE, BitmapDescriptorFactory.HUE_BLUE, BitmapDescriptorFactory.HUE_CYAN, BitmapDescriptorFactory.HUE_GREEN, BitmapDescriptorFactory.HUE_MAGENTA, BitmapDescriptorFactory.HUE_ORANGE, BitmapDescriptorFactory.HUE_RED, BitmapDescriptorFactory.HUE_ROSE, BitmapDescriptorFactory.HUE_VIOLET, BitmapDescriptorFactory.HUE_YELLOW};
     private ClusterManager<ClusterMarker> clusterManager;
     private String currentPersonID;
     private ServerProxy serverProxy;
@@ -58,6 +56,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
     private MapEventManager mapEventManager;
     private boolean isMapReady = false;
     private MapData mapData;
+
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+        mapData = MapData.getInstance();
+        mapData.init(context);
+    }
     private Person displayedPerson;
     private static final int SETTINGS_REQUEST_CODE = 1;
     private static final int SEARCH_REQUEST_CODE = 2;
@@ -138,9 +143,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
         // Initialize the cacheListener for events and persons
         setupCacheListeners();
 
-        // Create and execute the CacheDataTask
+        // Create and execute the CacheDataTask using the Singleton approach
         String initialEventID = getArguments() != null ? getArguments().getString("initialEventID") : null;
-        CacheDataTask cacheDataTask = new CacheDataTask(serverProxy, cacheEventListener, cachePersonListener);
+        CacheDataTask cacheDataTask = CacheDataTask.getInstance(serverProxy, cacheEventListener, cachePersonListener);
         cacheDataTask.execute(authToken);
 
         // Set the map ready flag
@@ -160,7 +165,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
             } else {
                 String personID = getArguments().getString("personID");
                 if (personID != null) {
-                    Person person = serverProxy.getPersonFromCache(personID);
+                    Person person = mapData.getPerson(personID);
                     focusOnCachedPerson(person);
                 }
             }
@@ -224,7 +229,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
                 if (args != null) {
                     String personID = args.getString("personID");
                     if (personID != null) {
-                        Person person = serverProxy.getPersonFromCache(personID);
+                        Person person = mapData.getPerson(personID);
                         focusOnCachedPerson(person);
                     }
                 }
@@ -238,7 +243,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
     }
 
     private void setupEventMarkers(Event[] events) {
-        mapEventManager = new MapEventManager(map, events, eventTypeColors, colorArray, clusterManager, getFilterSettings(), getActivity());
+        mapEventManager = new MapEventManager(map, mapData.getEvents(), mapData.getEventTypeColors(), mapData.getColorArray(), clusterManager, getFilterSettings(), getActivity());
         displayedPerson = getDisplayedPerson();
         mapEventManager.execute(displayedPerson);
     }
@@ -255,12 +260,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
         serverProxy = ServerProxy.getInstance(context);
 
         // Retrieve the person object from the cache based on the personID
-        Person person = serverProxy.getPersonFromCache(personID);
+        Person person = mapData.getPerson(personID);
         Log.d("MapFragment", "updateEventInfoTextView: " + person);
 
         if (person != null) {
             currentPersonID = personID;
-            loggedInPerson = serverProxy.getLoggedInUser();
+            loggedInPerson = mapData.getLoggedInPerson();
             setDisplayedPerson(person);
             String firstName = person.getFirstName();
             String lastName = person.getLastName();
@@ -289,7 +294,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
             // Add some padding between the icon and the text
             eventInfoTextView.setCompoundDrawablePadding(5);
             // Refresh the map
-            mapEventManager.refresh(getDisplayedPerson());
+            // Check to see if mapEventManager is null and if the person is null
+            if (mapEventManager != null && person != null) {
+                mapEventManager.refresh(person);
+            }
+            else {
+                setupEventMarkers(mapData.getEvents());
+            }
         }
     }
 
@@ -311,12 +322,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 
         Log.d("MapFragmentDebug", "onActivityCreated: started");
 
-        // Set the displayedPerson
-        setDisplayedPerson(serverProxy.getLoggedInUser());
-
-        // Retrieve the authToken from cache
-        String authToken = getAuthTokenFromStorage();
-
         // If initialEventID is passed as an argument and the map is ready, focus on the cached event's location
         if (getArguments() != null && isMapReady) {
             String initialEventID = getArguments().getString("initialEventID");
@@ -325,7 +330,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
             } else {
                 String personID = getArguments().getString("personID");
                 if (personID != null) {
-                    Person person = serverProxy.getPersonFromCache(personID);
+                    Person person = mapData.getPerson(personID);
                     focusOnCachedPerson(person);
                 }
             }
@@ -372,7 +377,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
             // Instantiate the server proxy
             context = getActivity();
             serverProxy = ServerProxy.getInstance(context);
-            Event[] events = serverProxy.getEventsFromCache();
+            Event[] events = mapData.getEvents();
 
             if (events != null) {
                 for (Event event : events) {
@@ -398,7 +403,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
             // Instantiate the server proxy
             context = getActivity();
             serverProxy = ServerProxy.getInstance(context);
-            Event[] events = serverProxy.getEventsFromCache();
+            Event[] events = mapData.getEvents();
 
             if (events != null) {
                 for (Event event : events) {
@@ -417,6 +422,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
             }
         }
     }
+
 
     private boolean[] getFilterSettings() {
         SharedPreferences sharedPreferences = requireContext().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE);
@@ -458,9 +464,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
     }
 
     private Person getDisplayedPerson() {
-        serverProxy = ServerProxy.getInstance(getActivity());
         if (displayedPerson == null) {
-            displayedPerson = serverProxy.getLoggedInUser();
+            displayedPerson = mapData.getLoggedInPerson();
         }
         return displayedPerson;
     }

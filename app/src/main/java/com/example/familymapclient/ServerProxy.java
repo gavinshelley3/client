@@ -51,8 +51,8 @@ public class ServerProxy {
     // Constructor to initialize the server URL and context when I reconnect serverHost and serverPort
     public ServerProxy(Context context, String serverHost, String serverPort) {
         requestQueue = Volley.newRequestQueue(context);
-//        BASE_URL = "http://" + serverHost + ":" + serverPort;
-        BASE_URL = "http://" + "10.0.2.2" + ":" + "3000";
+        BASE_URL = "http://" + serverHost + ":" + serverPort;
+//        BASE_URL = "http://" + "10.0.2.2" + ":" + "3000";
         this.context = context;
     }
 
@@ -175,6 +175,7 @@ public class ServerProxy {
 
                 // Set person to loggedInUser
                 setLoggedInUser(person);
+                loggedInUser = person;
 
                 // Add person to cache based on string "loggedInUser"
                 addToCache("loggedInUser", person);
@@ -236,6 +237,12 @@ public class ServerProxy {
 
                     // Add persons data to cache
                     addToCache("persons", persons);
+
+                    // Set person to loggedInUser
+                    if (getLoggedInUser() == null) {
+                        setLoggedInUser(persons[0]);
+                        loggedInUser = persons[0];
+                    }
 
                     // Call recursive method to get mother and father ancestors
                     motherAncestorPersons = getAncestorPersons(getLoggedInUser().getMotherID(), persons);

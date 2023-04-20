@@ -13,6 +13,8 @@ import Model.Event;
 import Model.Person;
 
 public class CacheDataTask {
+    private static CacheDataTask instance;
+
     private ServerProxy.cacheEventListener eventListener;
     private ServerProxy.cachePersonListener personListener;
     private ServerProxy serverProxy;
@@ -20,12 +22,22 @@ public class CacheDataTask {
     private Handler mainThreadHandler;
     private AtomicInteger tasksCompleted = new AtomicInteger(0);
 
-    public CacheDataTask(ServerProxy serverProxy, ServerProxy.cacheEventListener eventListener, ServerProxy.cachePersonListener personListener) {
+    private CacheDataTask(ServerProxy serverProxy, ServerProxy.cacheEventListener eventListener, ServerProxy.cachePersonListener personListener) {
         this.serverProxy = serverProxy;
         this.eventListener = eventListener;
         this.personListener = personListener;
         this.executor = Executors.newSingleThreadExecutor();
         this.mainThreadHandler = HandlerCompat.createAsync(Looper.getMainLooper());
+    }
+
+    public static CacheDataTask getInstance(ServerProxy serverProxy, ServerProxy.cacheEventListener eventListener, ServerProxy.cachePersonListener personListener) {
+        if (instance == null) {
+            instance = new CacheDataTask(serverProxy, eventListener, personListener);
+        } else {
+            instance.eventListener = eventListener;
+            instance.personListener = personListener;
+        }
+        return instance;
     }
 
     public void execute(String authToken) {

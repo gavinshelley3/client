@@ -54,8 +54,9 @@ public class SearchActivity extends AppCompatActivity {
     private void performSearch() {
         String searchString = searchInput.getText().toString().toLowerCase();
         Log.d("SearchActivity", "Search string: " + searchString);
-        // TODO: Perform search
-        serverProxy = ServerProxy.getInstance(getApplicationContext());
+        Filtering filtering = new Filtering(getApplicationContext());
+        MapData mapData = MapData.getInstance();
+        mapData.init(getApplicationContext());
         filterSettings = getFilterSettingsFromPreferences();
 
         // Get the search results from the cache
@@ -64,10 +65,10 @@ public class SearchActivity extends AppCompatActivity {
         fatherSideAncestors = serverProxy.getFatherAncestorPersonsFromCache();
 
         // Filter the search results based on the search string
-        Object[] filteredSearchResults = filterSearchResults(searchResults, searchString);
+        Object[] filteredSearchResults = filtering.filterSearchResults(searchResults, searchString);
 
         // Filter the search results based on the filter settings
-        Object[] finalSearchResults = finalFilterSearchResults(filteredSearchResults);
+        Object[] finalSearchResults = filtering.finalFilterSearchResults(filteredSearchResults);
 
         // Update the RecyclerView with the results
         SearchResultsAdapter searchResultsAdapter = (SearchResultsAdapter) searchResultsRecyclerView.getAdapter();
@@ -80,10 +81,10 @@ public class SearchActivity extends AppCompatActivity {
 
     // Method to retrieve the Events and Persons from the cache
     private Object[] getSearchResultsFromCache() {
-        serverProxy = ServerProxy.getInstance(getApplicationContext());
-        Event[] events = serverProxy.getEventsFromCache();
-        Person[] people = serverProxy.getPersonsFromCache();
-
+        MapData mapData = MapData.getInstance();
+        mapData.init(getApplicationContext());
+        Event[] events = mapData.getEvents();
+        Person[] people = mapData.getPersons();
 
         // Combine the events and people arrays into one array
         Object[] searchResults = new Object[events.length + people.length];
@@ -99,66 +100,6 @@ public class SearchActivity extends AppCompatActivity {
         return searchResults;
     }
 
-    // Method to filter the search results based on the search string
-    private Object[] filterSearchResults(Object[] searchResults, String searchString) {
-        ArrayList<Object> filteredSearchResults = new ArrayList<>();
-
-        for (Object searchResult : searchResults) {
-            if (searchResult instanceof Event) {
-                Event event = (Event) searchResult;
-                // Cast event.getYear() to a string to compare it to the search string
-                Integer eventYearInt = (Integer) event.getYear();
-                String eventYear = eventYearInt.toString();
-                if (event.getEventType().toLowerCase().contains(searchString) || event.getCity().toLowerCase().contains(searchString) || event.getCountry().toLowerCase().contains(searchString) || eventYear.contains(searchString)) {
-                    filteredSearchResults.add(event);
-                }
-            } else if (searchResult instanceof Person) {
-                Person person = (Person) searchResult;
-                if (person.getFirstName().toLowerCase().contains(searchString) || person.getLastName().toLowerCase().contains(searchString)) {
-                    filteredSearchResults.add(person);
-                }
-            }
-        }
-
-        return filteredSearchResults.toArray();
-    }
-
-    // Method to filter the search results based on the filter settings
-    private Object[] finalFilterSearchResults(Object[] searchResults) {
-        ArrayList<Object> finalSearchResults = new ArrayList<>();
-
-        for (Object searchResult : searchResults) {
-            if (searchResult instanceof Event) {
-                Event event = (Event) searchResult;
-                Person associatedPerson = serverProxy.getPersonFromCache(event.getPersonID());
-                if (!filterSettings[3] && associatedPerson.getGender().equals("m")) {
-
-                } else if (!filterSettings[4] && associatedPerson.getGender().equals("f")) {
-
-                } else if (!filterSettings[5] && isAncestor(associatedPerson.getPersonID(), motherSideAncestors)) {
-
-                } else if (!filterSettings[6] && isAncestor(associatedPerson.getPersonID(), fatherSideAncestors)) {
-
-                } else {
-                    finalSearchResults.add(searchResult);
-                }
-            } else if (searchResult instanceof Person) {
-                finalSearchResults.add(searchResult);
-            }
-        }
-
-        return finalSearchResults.toArray();
-    }
-
-    // Method to check if a person is an ancestor of the current user
-    private boolean isAncestor(String personID, Person[] ancestors) {
-        for (Person ancestor : ancestors) {
-            if (ancestor.getPersonID().equals(personID)) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     private boolean[] getFilterSettingsFromPreferences() {
         context = getApplicationContext();

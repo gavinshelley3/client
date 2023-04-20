@@ -159,19 +159,19 @@ public class LoginFragment extends Fragment {
 
     // Validate input fields before performing login or registration
     private boolean validateInput(boolean isLogin) {
-        // Check required fields for login
-        if (isLogin) {
-            if (usernameEditText.getText().toString().isEmpty() || passwordEditText.getText().toString().isEmpty() || serverHostEditText.getText().toString().isEmpty() || serverPortEditText.getText().toString().isEmpty()) {
-                Toast.makeText(getActivity(), "Please fill in all fields", Toast.LENGTH_SHORT).show();
-                return false;
-            }
-        }
-        // Check required fields for registration
-        else {
-            if (usernameEditText.getText().toString().isEmpty() || passwordEditText.getText().toString().isEmpty() || emailEditText.getText().toString().isEmpty() || firstNameEditText.getText().toString().isEmpty() || lastNameEditText.getText().toString().isEmpty() || serverHostEditText.getText().toString().isEmpty() || serverPortEditText.getText().toString().isEmpty() || (!maleRadioButton.isChecked() && !femaleRadioButton.isChecked())) {
-                Toast.makeText(getActivity(), "Please fill in all fields", Toast.LENGTH_SHORT).show();
-                return false;
-            }
+        String username = usernameEditText.getText().toString();
+        String password = passwordEditText.getText().toString();
+        String serverHost = serverHostEditText.getText().toString();
+        String serverPort = serverPortEditText.getText().toString();
+        String email = emailEditText.getText().toString();
+        String firstName = firstNameEditText.getText().toString();
+        String lastName = lastNameEditText.getText().toString();
+        String gender = maleRadioButton.isChecked() ? "m" : femaleRadioButton.isChecked() ? "f" : "";
+
+        LoginHelper loginHelper = new LoginHelper();
+        if (!loginHelper.validateInput(isLogin, username, password, serverHost, serverPort, email, firstName, lastName, gender)) {
+            Toast.makeText(getActivity(), "Please fill in all fields", Toast.LENGTH_SHORT).show();
+            return false;
         }
         return true;
     }

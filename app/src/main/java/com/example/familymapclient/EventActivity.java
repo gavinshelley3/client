@@ -17,7 +17,9 @@ public class EventActivity extends AppCompatActivity {
     private TextView yearTextView;
     private TextView cityTextView;
     private TextView countryTextView;
-    private ServerProxy serverProxy;
+
+    // Use the MapData singleton instead of ServerProxy
+    private MapData mapData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,15 +29,15 @@ public class EventActivity extends AppCompatActivity {
         // Set up the toolbar with an Up button
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        // Get the ServerProxy instance
-        serverProxy = ServerProxy.getInstance(getApplicationContext());
+        // Get the MapData instance
+        mapData = MapData.getInstance();
 
         // Get eventID from the intent
         Intent intent = getIntent();
         String eventID = intent.getStringExtra("eventID");
 
-        // Retrieve the event object from the cache based on the eventID
-        Event event = serverProxy.getEventFromCache(eventID);
+        // Retrieve the event object from the MapData based on the eventID
+        Event event = mapData.getEvent(eventID);
 
         // Initialize MapFragment with the eventID as an argument
         MapFragment mapFragment = new MapFragment();

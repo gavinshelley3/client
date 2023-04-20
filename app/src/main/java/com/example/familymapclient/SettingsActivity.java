@@ -2,7 +2,6 @@ package com.example.familymapclient;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
@@ -26,6 +25,8 @@ public class SettingsActivity extends AppCompatActivity {
     private Button saveSettingsButton;
     private Button logoutButton;
 
+    private Filtering filtering;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,24 +48,25 @@ public class SettingsActivity extends AppCompatActivity {
         saveSettingsButton = findViewById(R.id.save_settings_button);
         logoutButton = findViewById(R.id.logout_button);
 
-        // Get SharedPreferences instance
-        SharedPreferences sharedPreferences = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE);
+        // Get Filtering instance
+        filtering = new Filtering(this);
 
         // Load saved settings and set switch states
-        spouseLinesSwitch.setChecked(sharedPreferences.getBoolean("spouseLinesEnabled", true));
-        familyTreeLinesSwitch.setChecked(sharedPreferences.getBoolean("familyTreeLinesEnabled", true));
-        lifeStoryLineSwitch.setChecked(sharedPreferences.getBoolean("lifeStoryLineEnabled", true));
-        filterGenderMaleSwitch.setChecked(sharedPreferences.getBoolean("filterGenderMale", true));
-        filterGenderFemaleSwitch.setChecked(sharedPreferences.getBoolean("filterGenderFemale", true));
-        filterSideMotherSwitch.setChecked(sharedPreferences.getBoolean("filterSideMother", true));
-        filterSideFatherSwitch.setChecked(sharedPreferences.getBoolean("filterSideFather", true));
+        boolean[] filterSettings = filtering.getFilterSettings();
+        spouseLinesSwitch.setChecked(filterSettings[0]);
+        familyTreeLinesSwitch.setChecked(filterSettings[1]);
+        lifeStoryLineSwitch.setChecked(filterSettings[2]);
+        filterGenderMaleSwitch.setChecked(filterSettings[3]);
+        filterGenderFemaleSwitch.setChecked(filterSettings[4]);
+        filterSideMotherSwitch.setChecked(filterSettings[5]);
+        filterSideFatherSwitch.setChecked(filterSettings[6]);
 
         // Set up listeners for switches
         spouseLinesSwitch.setOnCheckedChangeListener(new OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // Save spouse lines setting
-                sharedPreferences.edit().putBoolean("spouseLinesEnabled", isChecked).apply();
+                filtering.saveFilterSetting(0, isChecked);
             }
         });
 
@@ -72,7 +74,7 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // Save family tree lines setting
-                sharedPreferences.edit().putBoolean("familyTreeLinesEnabled", isChecked).apply();
+                filtering.saveFilterSetting(1, isChecked);
             }
         });
 
@@ -80,7 +82,7 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // Save life story line setting
-                sharedPreferences.edit().putBoolean("lifeStoryLineEnabled", isChecked).apply();
+                filtering.saveFilterSetting(2, isChecked);
             }
         });
 
@@ -88,7 +90,7 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // Save filter gender male setting
-                sharedPreferences.edit().putBoolean("filterGenderMale", isChecked).apply();
+                filtering.saveFilterSetting(3, isChecked);
             }
         });
 
@@ -96,7 +98,7 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // Save filter gender female setting
-                sharedPreferences.edit().putBoolean("filterGenderFemale", isChecked).apply();
+                filtering.saveFilterSetting(4, isChecked);
             }
         });
 
@@ -104,7 +106,7 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // Save filter side mother setting
-                sharedPreferences.edit().putBoolean("filterSideMother", isChecked).apply();
+                filtering.saveFilterSetting(5, isChecked);
             }
         });
 
@@ -112,7 +114,7 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // Save filter side father setting
-                sharedPreferences.edit().putBoolean("filterSideFather", isChecked).apply();
+                filtering.saveFilterSetting(6, isChecked);
             }
         });
 
