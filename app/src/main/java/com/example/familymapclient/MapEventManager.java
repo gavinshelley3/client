@@ -40,6 +40,8 @@ public class MapEventManager {
     private Person loggedInPerson;
     private List<Person> motherSideAncestors;
     private List<Person> fatherSideAncestors;
+    private Person[] motherAncestorPersons;
+    private Person[] fatherAncestorPersons;
     private Context context;
     private Person displayedPerson;
 
@@ -55,6 +57,8 @@ public class MapEventManager {
         this.serverProxy = ServerProxy.getInstance(context);
         this.loggedInPerson = serverProxy.getLoggedInUser();
         this.context = context;
+        this.motherAncestorPersons = serverProxy.getMotherAncestorPersonsFromCache();
+        this.fatherAncestorPersons = serverProxy.getFatherAncestorPersonsFromCache();
     }
 
     public void execute(Person displayedPersonInput) {
@@ -82,8 +86,7 @@ public class MapEventManager {
                     drawSpouseLines(displayedPerson);
                     drawFamilyTreeLines(displayedPerson, 5);
                     drawLifeStoryLines(displayedPerson);
-                }
-                else {
+                } else {
                     Log.d("MapEventManagerDebug", "execute: displayedPerson is null");
                 }
                 Log.d("MapEventManagerDebug", "execute: finished adding markers and lines for events - " + Arrays.toString(events));
@@ -162,13 +165,8 @@ public class MapEventManager {
             return false;
         }
 
-        boolean mothersSideAncestor = isAncestorOnMotherSide(person.getPersonID());
-        boolean fathersSideAncestor = isAncestorOnFatherSide(person.getPersonID());
-
-        if (!mothersSideAncestor && !fathersSideAncestor && !person.getPersonID().equals(loggedInPerson.getPersonID())) {
-            Log.d("Filter", "Event not shown: person is not an ancestor on either side");
-            return false;
-        }
+        boolean mothersSideAncestor = isAncestor(person.getPersonID(), motherAncestorPersons);
+        boolean fathersSideAncestor = isAncestor(person.getPersonID(), fatherAncestorPersons);
 
         if (mothersSideAncestor && !filterSettings[5]) {
             Log.d("Filter", "Event not shown: mothers side ancestor filter not enabled");
@@ -180,15 +178,22 @@ public class MapEventManager {
             return false;
         }
 
+        if (!mothersSideAncestor && !fathersSideAncestor && !person.getPersonID().equals(loggedInPerson.getPersonID()) && !person.getPersonID().equals(loggedInPerson.getSpouseID())) {
+            Log.d("Filter", "Event not shown: person is not an ancestor on either side");
+            return false;
+        }
+
         return true;
     }
 
-    private boolean isAncestorOnMotherSide(String personID) {
-        return motherSideAncestors.stream().anyMatch(person -> person.getPersonID().equals(personID));
-    }
-
-    private boolean isAncestorOnFatherSide(String personID) {
-        return fatherSideAncestors.stream().anyMatch(person -> person.getPersonID().equals(personID));
+    // Method to check if a person is an ancestor of the current user
+    private boolean isAncestor(String personID, Person[] ancestors) {
+        for (Person ancestor : ancestors) {
+            if (ancestor.getPersonID().equals(personID)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private float getMarkerColor(String eventType) {
@@ -256,11 +261,7 @@ public class MapEventManager {
 
         int lineColorInt = getLineColorForRelationship("spouse");
 
-        PolylineOptions polylineOptions = new PolylineOptions()
-                .add(displayedPersonLatLng)
-                .add(spouseLatLng)
-                .width(5)
-                .color(lineColorInt);
+        PolylineOptions polylineOptions = new PolylineOptions().add(displayedPersonLatLng).add(spouseLatLng).width(5).color(lineColorInt);
 
         mainThreadHandler.post(() -> {
             map.addPolyline(polylineOptions);
@@ -290,11 +291,7 @@ public class MapEventManager {
 
                 int lineColorInt = getLineColorForRelationship("father");
 
-                PolylineOptions polylineOptions = new PolylineOptions()
-                        .add(displayedPersonLatLng)
-                        .add(fatherLatLng)
-                        .width(lineWidth)
-                        .color(lineColorInt);
+                PolylineOptions polylineOptions = new PolylineOptions().add(displayedPersonLatLng).add(fatherLatLng).width(lineWidth).color(lineColorInt);
 
                 mainThreadHandler.post(() -> {
                     map.addPolyline(polylineOptions);
@@ -318,11 +315,7 @@ public class MapEventManager {
 
                 int lineColorInt = getLineColorForRelationship("mother");
 
-                PolylineOptions polylineOptions = new PolylineOptions()
-                        .add(displayedPersonLatLng)
-                        .add(motherLatLng)
-                        .width(lineWidth)
-                        .color(lineColorInt);
+                PolylineOptions polylineOptions = new PolylineOptions().add(displayedPersonLatLng).add(motherLatLng).width(lineWidth).color(lineColorInt);
 
                 mainThreadHandler.post(() -> {
                     map.addPolyline(polylineOptions);
@@ -337,10 +330,7 @@ public class MapEventManager {
     }
 
     private Event getEarliestEvent(String personID) {
-        return Arrays.stream(events)
-                .filter(event -> event.getPersonID().equals(personID))
-                .min(Comparator.comparing(Event::getYear))
-                .orElse(null);
+        return Arrays.stream(events).filter(event -> event.getPersonID().equals(personID)).min(Comparator.comparing(Event::getYear)).orElse(null);
     }
 
     private void drawLifeStoryLines(Person displayedPerson) {
@@ -348,10 +338,7 @@ public class MapEventManager {
             return;
         }
 
-        List<Event> personEvents = Arrays.stream(events)
-                .filter(event -> event.getPersonID().equals(displayedPerson.getPersonID()))
-                .sorted(Comparator.comparing(Event::getYear))
-                .collect(Collectors.toList());
+        List<Event> personEvents = Arrays.stream(events).filter(event -> event.getPersonID().equals(displayedPerson.getPersonID())).sorted(Comparator.comparing(Event::getYear)).collect(Collectors.toList());
 
         for (int i = 0; i < personEvents.size() - 1; i++) {
             Event event1 = personEvents.get(i);
@@ -362,11 +349,7 @@ public class MapEventManager {
 
             int lineColorInt = getLineColorForRelationship(event1.getEventType());
 
-            PolylineOptions polylineOptions = new PolylineOptions()
-                    .add(latLng1)
-                    .add(latLng2)
-                    .width(5)
-                    .color(lineColorInt);
+            PolylineOptions polylineOptions = new PolylineOptions().add(latLng1).add(latLng2).width(5).color(lineColorInt);
 
             mainThreadHandler.post(() -> {
                 map.addPolyline(polylineOptions);
@@ -375,10 +358,7 @@ public class MapEventManager {
     }
 
     private Event getBirthEvent(String personID) {
-        return Arrays.stream(events)
-                .filter(event -> event.getPersonID().equals(personID) && event.getEventType().equalsIgnoreCase("birth"))
-                .findFirst()
-                .orElse(null);
+        return Arrays.stream(events).filter(event -> event.getPersonID().equals(personID) && event.getEventType().equalsIgnoreCase("birth")).findFirst().orElse(null);
     }
 
     public void refresh(Person displayedPerson) {

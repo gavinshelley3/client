@@ -60,6 +60,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
     private MapData mapData;
     private Person displayedPerson;
     private static final int SETTINGS_REQUEST_CODE = 1;
+    private static final int SEARCH_REQUEST_CODE = 2;
 
     public MapFragment() {
         // Required empty public constructor
@@ -106,6 +107,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
         switch (item.getItemId()) {
             case R.id.action_search:
                 // Handle search action
+                Intent searchIntent = new Intent(getActivity(), SearchActivity.class);
+                startActivityForResult(searchIntent, SEARCH_REQUEST_CODE);
                 return true;
             case R.id.action_settings:
                 Intent intent = new Intent(getActivity(), SettingsActivity.class);

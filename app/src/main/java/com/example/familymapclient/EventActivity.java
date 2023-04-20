@@ -51,10 +51,9 @@ public class EventActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
 
-        // If the Up button is pressed, navigate back to the MainActivity
+        // If the Up button is pressed, navigate back to the MapFragment in the MainActivity
         if (id == android.R.id.home) {
-            finish();
-            return true;
+            NavUtils.navigateUpFromSameTask(this);
         }
 
         return super.onOptionsItemSelected(item);

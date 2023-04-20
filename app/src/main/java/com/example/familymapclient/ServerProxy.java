@@ -223,6 +223,8 @@ public class ServerProxy {
                 if (success) {
                     JSONArray data = response.getJSONArray("data");
                     Person[] persons = new Person[data.length()];
+                    Person[] motherAncestorPersons = new Person[0];
+                    Person[] fatherAncestorPersons = new Person[0];
 
                     for (int i = 0; i < data.length(); i++) {
                         JSONObject personJson = data.getJSONObject(i);
@@ -234,6 +236,15 @@ public class ServerProxy {
 
                     // Add persons data to cache
                     addToCache("persons", persons);
+
+                    // Call recursive method to get mother and father ancestors
+                    motherAncestorPersons = getAncestorPersons(getLoggedInUser().getMotherID(), persons);
+                    fatherAncestorPersons = getAncestorPersons(getLoggedInUser().getFatherID(), persons);
+
+                    // Add motherAncestorPersons data to cache
+                    addToCache("motherAncestorPersons", motherAncestorPersons);
+                    // Add fatherAncestorPersons data to cache
+                    addToCache("fatherAncestorPersons", fatherAncestorPersons);
 
                     listener.onCacheMultiplePersonsSuccess(persons);
                 } else {
@@ -323,6 +334,46 @@ public class ServerProxy {
         return getObjectFromCache("persons", Person[].class);
     }
 
+    private Person[] getAncestorPersons(String parentID, Person[] persons) {
+        if (parentID == null || parentID.isEmpty()) {
+            return new Person[0];
+        }
+
+        Person parent = null;
+        for (Person person : persons) {
+            if (person.getPersonID().equals(parentID)) {
+                parent = person;
+                break;
+            }
+        }
+
+        if (parent == null) {
+            return new Person[0];
+        }
+
+        Person[] motherAncestors = getAncestorPersons(parent.getMotherID(), persons);
+        Person[] fatherAncestors = getAncestorPersons(parent.getFatherID(), persons);
+
+        Person[] ancestors = new Person[motherAncestors.length + fatherAncestors.length + 1];
+        ancestors[0] = parent;
+        System.arraycopy(motherAncestors, 0, ancestors, 1, motherAncestors.length);
+        System.arraycopy(fatherAncestors, 0, ancestors, 1 + motherAncestors.length, fatherAncestors.length);
+
+        return ancestors;
+    }
+
+    // Method to get motherAncestorPersons from the cache
+    public Person[] getMotherAncestorPersonsFromCache() {
+        Log.d("ServerProxy", "getMotherAncestorPersonsFromCache: ");
+        return getObjectFromCache("motherAncestorPersons", Person[].class);
+    }
+
+    // Method to get fatherAncestorPersons from the cache
+    public Person[] getFatherAncestorPersonsFromCache() {
+        Log.d("ServerProxy", "getFatherAncestorPersonsFromCache: ");
+        return getObjectFromCache("fatherAncestorPersons", Person[].class);
+    }
+
     // Getter and Setter methods to save the logged in user's Person
     public Person getLoggedInUser() {
         // If the loggedInUser is null, try to get it from cache
@@ -345,6 +396,7 @@ public class ServerProxy {
     public void setLoggedInUser(Person loggedInUser) {
         this.loggedInUser = loggedInUser;
     }
+
 
     public void clearCache() {
         if (requestQueue != null) {
